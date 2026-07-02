@@ -30,3 +30,4 @@ export {
 } from './schema.js';
 export * from './dao/index.js';
 export { createFixtureDao } from './fixtures/fixture-dao.js';
+export { openStore, type LocalStoreHandle, type OpenStoreOptions } from './store.js';

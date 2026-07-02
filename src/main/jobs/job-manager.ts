@@ -17,7 +17,7 @@ import { Worker } from 'node:worker_threads';
 
 import type { Logger } from '../../shared/logger.js';
 import type { EventBus } from '../ipc/event-bus.js';
-import type { JobsDao } from '../data/dao/jobs.dao.js';
+import type { JobsDao } from '../db/dao/jobs.js';
 import type { JobManagerLike } from '../services/jobs.service.js';
 
 import type {

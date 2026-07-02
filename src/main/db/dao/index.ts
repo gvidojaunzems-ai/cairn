@@ -56,3 +56,10 @@ export {
   type TopKResult,
   type TopKOptions,
 } from './vectors.js';
+export {
+  createJobsDao,
+  type JobsDao,
+  type InsertJobInput,
+  type UpdateJobStatusInput,
+  type UpdateJobProgressInput,
+} from './jobs.js';

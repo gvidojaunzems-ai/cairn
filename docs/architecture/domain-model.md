@@ -167,11 +167,12 @@ Lightweight ledger for tracking project spend (currency defaults to `USD`).
 ### jobs
 
 Background jobs orchestrated by the main process (fetch feeds, run
-embeddings, sync the team repo).
+embeddings, sync the team repo). Introduced in migration `0002-jobs-table`
+(ADR 0004).
 
-- Fields: `id`, `job_type`, `status`, `payload?`, `error?`, `started_at?`,
-  `completed_at?`, `created_at`, `updated_at`.
-- **Status enum**: `pending | running | done | failed | cancelled`
+- Fields: `id`, `kind`, `status`, `created_at`, `updated_at`,
+  `progress_pct?`, `label?`, `result?`, `error?`.
+- **Status enum**: `pending | running | succeeded | failed | cancelled`
   (default `pending`).
 
 ### sync_state
@@ -207,7 +208,7 @@ the full contract and rationale.
 | wip_signals   | `active`, `resolved`, `muted`                            |
 | decisions     | `proposed`, `accepted`, `rejected`, `superseded`         |
 | action_items  | `open`, `in_progress`, `done`, `cancelled`               |
-| jobs          | `pending`, `running`, `done`, `failed`, `cancelled`      |
+| jobs          | `pending`, `running`, `succeeded`, `failed`, `cancelled` |
 
 Adding a value to any of the enums above is a **breaking schema change** —
 it needs a follow-up migration and a supersession ADR that references

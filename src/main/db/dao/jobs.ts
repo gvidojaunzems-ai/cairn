@@ -12,7 +12,7 @@
  *     row.
  *   - Single-writer discipline: the caller (main thread) owns the DB. This
  *     DAO does not open its own connection — it uses the handle passed by
- *     `openLocalStore`.
+ *     `openStore` / `openDatabase`.
  */
 import type { Database, Statement } from 'better-sqlite3';
 
@@ -101,8 +101,6 @@ function isJobStatus(value: string): value is JobStatus {
  */
 function rowToJob(row: JobRowRaw): JobsTableRow {
   if (!isJobStatus(row.status)) {
-    // The CHECK constraint should catch this, but if a hand-edit slipped
-    // past the schema we surface a clear error rather than mis-typing.
     throw new Error(`jobs.status has invalid value: ${row.status}`);
   }
   const mapped: JobsTableRow = {

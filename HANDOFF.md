@@ -58,7 +58,7 @@ better-sqlite3 binary and the sqlite-vec extension to be on disk.
 | `src/main/services/` | 16 per-namespace service objects (mostly `not_implemented` stubs). |
 | `src/main/workers/` | `node:worker_threads` background-worker script. |
 | `src/main/jobs/` | `JobManager`, job registry, sample-long-job fixture, worker message shapes. |
-| `src/main/data/` | better-sqlite3 handle, migration runner, `JobsDao`. |
+| `src/main/db/` | Canonical SQLite store: migrations, entity DAOs, jobs DAO, `openStore()`. |
 | `src/preload/` | Preload script exposing the typed `window.cairn` bridge to the renderer. |
 | `src/renderer/` | UI layer: React app, hooks, global CSS. |
 | `src/renderer/ipc/` | Renderer-side typed `CairnRendererClient` + `useCoreService` hook. |
@@ -155,7 +155,7 @@ import it (the architecture lint test at
 
 `LocalStoreSchema.version` bumped from `1` to `2`. The v2 addition is
 the `jobs` SQLite table (see ADR 0004). The migration runner at
-`src/main/data/migrations/` idempotently creates the table on first
+`src/main/db/migrations/0002-jobs-table.ts` idempotently creates the table on first
 upgrade; only the main thread writes to it (see ADR 0002).
 
 ## Architecture

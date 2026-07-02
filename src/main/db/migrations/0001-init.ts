@@ -228,20 +228,6 @@ CREATE TABLE budget_ledger (
 );
 CREATE INDEX ix_budget_ledger_project ON budget_ledger(project_id);
 
-CREATE TABLE jobs (
-  id TEXT PRIMARY KEY,
-  job_type TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'pending'
-    CHECK (status IN ('pending', 'running', 'done', 'failed', 'cancelled')),
-  payload TEXT,
-  error TEXT,
-  started_at TEXT,
-  completed_at TEXT,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
-);
-CREATE INDEX ix_jobs_status ON jobs(status);
-
 CREATE TABLE sync_state (
   id TEXT PRIMARY KEY,
   entity_type TEXT NOT NULL,

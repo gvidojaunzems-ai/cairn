@@ -38,6 +38,11 @@ export interface OpenDatabaseOptions {
    * tests that want to inspect a raw (pre-migration) handle.
    */
   skipMigrations?: boolean;
+  /**
+   * When true, skip loading sqlite-vec. Only for tests that exercise non-vector
+   * tables (e.g. jobs DAO) without requiring the native extension.
+   */
+  skipSqliteVec?: boolean;
 }
 
 /**
@@ -94,7 +99,9 @@ export function openDatabase(options: OpenDatabaseOptions = {}): Database.Databa
     // the file up so the copy is a full snapshot.
     db.pragma('journal_mode = WAL');
     db.pragma('foreign_keys = ON');
-    loadSqliteVec(db);
+    if (options.skipSqliteVec !== true) {
+      loadSqliteVec(db);
+    }
 
     if (options.skipMigrations !== true) {
       runMigrations(db, { dbPath });

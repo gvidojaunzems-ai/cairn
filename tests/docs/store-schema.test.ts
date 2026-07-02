@@ -9,31 +9,36 @@ const INITIAL_MIGRATION = resolve(
   __dirname,
   '../../src/main/db/migrations/0001-init.ts',
 );
+const JOBS_MIGRATION = resolve(
+  __dirname,
+  '../../src/main/db/migrations/0002-jobs-table.ts',
+);
 
 /**
- * Extract every table name from the initial migration file so this test
+ * Extract every table name from migration files so this test
  * stays honest as new tables land — it always scans the actual DDL, never a
  * hand-maintained list.
  */
-function extractTablesFromMigration(): string[] {
-  if (!existsSync(INITIAL_MIGRATION)) {
-    return [];
-  }
-  const src = readFileSync(INITIAL_MIGRATION, 'utf-8');
-  // Match both `CREATE TABLE name` and `CREATE VIRTUAL TABLE name` forms.
-  const pattern = /CREATE\s+(?:VIRTUAL\s+)?TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?([A-Za-z_][A-Za-z0-9_]*)/gi;
+function extractTablesFromMigration(...paths: string[]): string[] {
   const tables: string[] = [];
-  let match: RegExpExecArray | null;
-  while ((match = pattern.exec(src)) !== null) {
-    if (typeof match[1] === 'string') {
-      tables.push(match[1]);
+  for (const migrationPath of paths) {
+    if (!existsSync(migrationPath)) {
+      continue;
+    }
+    const src = readFileSync(migrationPath, 'utf-8');
+    const pattern = /CREATE\s+(?:VIRTUAL\s+)?TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?([A-Za-z_][A-Za-z0-9_]*)/gi;
+    let match: RegExpExecArray | null;
+    while ((match = pattern.exec(src)) !== null) {
+      if (typeof match[1] === 'string') {
+        tables.push(match[1]);
+      }
     }
   }
   return tables;
 }
 
 describe('docs/architecture/store-schema.md (S10)', () => {
-  const tables = extractTablesFromMigration();
+  const tables = extractTablesFromMigration(INITIAL_MIGRATION, JOBS_MIGRATION);
 
   // qa-spec: S10
   it('exists at docs/architecture/store-schema.md', () => {

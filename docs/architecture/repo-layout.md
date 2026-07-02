@@ -49,8 +49,8 @@ integration.
   script (`background.worker.ts`).
 - `src/main/jobs/` — main-thread `JobManager`, sample-long-job fixture,
   job-registry, and worker message shapes.
-- `src/main/data/` — better-sqlite3 handle + jobs DAO layer used by the
-  job manager (migrations `001-initial`, `002-jobs-table`).
+- `src/main/db/dao/` — typed DAOs per entity, including `jobs` (ADR 0004).
+- `src/main/db/store.ts` — `openStore()` bundles `openDatabase` + `jobsDao`.
 - `src/preload/index.ts` — the ONLY IPC bridge. Exposes a typed
   `window.cairn` surface (`invoke`, `on`, `off`, `restartApp`) via
   `contextBridge.exposeInMainWorld`.
@@ -74,8 +74,8 @@ barrel export.
     `PRAGMA user_version`. Throws `NewerSchemaVersionError` when the DB
     reports a schema newer than the code (see ADR 0003).
   - `index.ts` — sequential migration registry.
-  - `0001-init.ts` — DDL for all 22 tables (20 entity tables +
-    `vector_metadata` + `vec_items` virtual table).
+  - `0001-init.ts` — DDL for entity tables + vector storage.
+  - `0002-jobs-table.ts` — ADR 0004 jobs table (schema v2).
 - `src/main/db/dao/` — typed DAOs per entity (`knowledge-items`,
   `people`, `projects`, `charters`, `news-items`, `docs`, `tickets`,
   `wip-signals`, `vectors`, and the `index.ts` barrel).

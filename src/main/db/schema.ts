@@ -20,7 +20,7 @@
  * (`migrations/index.ts`) must contain a migration with this exact version
  * as its last entry — asserted by the migration runner at construction time.
  */
-export const CODE_SCHEMA_VERSION = 1;
+export const CODE_SCHEMA_VERSION = 2;
 
 /**
  * Default vector dimension for the vec0 virtual table. 1536 matches the

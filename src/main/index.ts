@@ -36,6 +36,9 @@ import { createDirectories, databaseFile, resolvePaths } from '../shared/paths.j
 import { createLogger } from '../shared/logger.js';
 import { registerIpcHandlers } from './ipc/register-handlers.js';
 import { createEventBus, type EventBus } from './ipc/event-bus.js';
+import { openStore, type LocalStoreHandle } from './db/store.js';
+import { createJobManager, type JobManager } from './jobs/job-manager.js';
+import type { JobManagerLike } from './services/jobs.service.js';
 
 export const WINDOW_TITLE = 'Cairn';
 export const RESTART_APP_CHANNEL = 'restart-app';
@@ -189,6 +192,8 @@ function showNewerSchemaError(reason: string): void {
 }
 
 let cachedEventBus: EventBus | undefined;
+let cachedStore: LocalStoreHandle | undefined;
+let cachedJobManager: JobManager | undefined;
 
 /**
  * Lazily construct the event bus. Kept lazy so tests that only need to
@@ -201,12 +206,33 @@ export function getEventBus(): EventBus {
   return cachedEventBus;
 }
 
+function ensureJobManager(): JobManager {
+  if (!cachedJobManager) {
+    cachedStore = openStore();
+    cachedJobManager = createJobManager({
+      jobsDao: cachedStore.jobsDao,
+      eventBus: getEventBus(),
+    });
+  }
+  return cachedJobManager;
+}
+
+/**
+ * Lazy proxy so IPC handlers are registered once at bootstrap while the
+ * worker + DB connection spin up only on the first `jobs.start` call.
+ */
+const lazyJobManager: JobManagerLike = {
+  startJob(kind, input) {
+    return ensureJobManager().startJob(kind, input);
+  },
+  cancelJob(jobId) {
+    return ensureJobManager().cancelJob(jobId);
+  },
+};
+
 function registerIpcChannels(): void {
   registerRestartChannel();
-  // The namespaced router owns every declared `namespace.op` handler.
-  // Passing no `jobManager` means `jobs.*` responds with `not_implemented`
-  // until the worker is lazily initialised on the first job.start call.
-  registerIpcHandlers();
+  registerIpcHandlers({ jobManager: lazyJobManager });
 }
 
 /**

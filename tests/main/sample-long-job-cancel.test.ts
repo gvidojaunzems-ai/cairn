@@ -5,9 +5,7 @@
 // the manager + runner glue is exercised end-to-end without needing a
 // compiled worker script.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { rmSync } from 'node:fs';
 
 vi.mock('electron', () => ({
   ipcMain: { handle: vi.fn(), removeHandler: vi.fn() },
@@ -16,8 +14,8 @@ vi.mock('electron', () => ({
   BrowserWindow: vi.fn(),
 }));
 
-import { openLocalStore, LOCAL_STORE_FILE_NAME } from '../../src/main/data/db';
-import type { LocalStoreHandle } from '../../src/main/data/db';
+import { openTestStore } from '../helpers/test-db';
+import type { LocalStoreHandle } from '../../src/main/db/store';
 import { createEventBus } from '../../src/main/ipc/event-bus';
 import type { WebContentsLike } from '../../src/main/ipc/event-bus';
 import {
@@ -132,8 +130,7 @@ let manager: JobManager | null;
 let events: EmittedEvent[];
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'cairn-sample-cancel-'));
-  store = openLocalStore({ filePath: join(dir, LOCAL_STORE_FILE_NAME) });
+  ({ store, dir } = openTestStore('cairn-sample-cancel-'));
   events = [];
   manager = null;
 });
