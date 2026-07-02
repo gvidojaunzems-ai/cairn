@@ -83,12 +83,21 @@ export interface KeychainAdapter {
 
 let cachedModule: NapiKeyringModule | null | undefined;
 
+/** Test-only: reset the lazy keyring module cache between Vitest cases. */
+export function resetKeychainModuleCacheForTests(): void {
+  cachedModule = undefined;
+}
+
 /**
  * Attempt to load `@napi-rs/keyring`. Returns `null` if the module is not
  * installed or the native binding failed to load — the adapter falls back
  * to the encrypted-file backend in that case.
  */
 function loadKeyringModule(): NapiKeyringModule | null {
+  if (process.env.CAIRN_FORCE_KEYCHAIN_FALLBACK === '1') {
+    cachedModule = null;
+    return null;
+  }
   if (cachedModule !== undefined) {
     return cachedModule;
   }

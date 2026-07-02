@@ -92,3 +92,38 @@ export const KNOWN_ENTITY_TABLES = [
  * so autocomplete and exhaustive switches over known entities work.
  */
 export type KnownEntityTable = (typeof KNOWN_ENTITY_TABLES)[number];
+
+/**
+ * Canonical table manifest introduced in migration `0001-init.ts`.
+ * Consumers iterate this list without importing from `src/main/db/**`.
+ */
+export const TABLE_MANIFEST = [
+  'people',
+  'projects',
+  'charters',
+  'knowledge_items',
+  'news_topics',
+  'news_items',
+  'docs',
+  'tickets',
+  'wip_signals',
+  'updates',
+  'decisions',
+  'apps',
+  'meetings',
+  'action_items',
+  'reports',
+  'feeds',
+  'budget_ledger',
+  'jobs',
+  'sync_state',
+  'settings_kv',
+  'vector_metadata',
+  'vec_items',
+] as const;
+
+/** Highest schema version this contract describes. */
+export const CURRENT_SCHEMA_VERSION = 1;
+
+/** Default vec0 embedding dimension (OpenAI ada-002 / text-embedding-3-small). */
+export const VECTOR_DIMENSION = 1536;

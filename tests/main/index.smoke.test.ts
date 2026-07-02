@@ -60,6 +60,11 @@ vi.mock('../../src/main/config/team-config', () => ({
   teamConfigPath: vi.fn(() => '/mock/data/team-repo/config.json'),
 }));
 
+vi.mock('../../src/main/db/index.js', () => ({
+  openDatabase: vi.fn(() => ({ close: vi.fn() })),
+  runMigrations: vi.fn(),
+}));
+
 describe('main/index — S1/S12 startup wiring', () => {
   // qa-spec: S1
   it('module loads without throwing', async () => {

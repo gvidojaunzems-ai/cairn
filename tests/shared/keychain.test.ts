@@ -27,17 +27,25 @@ let scratch: string | null = null;
 function stageDataDir(): string {
   const root = mkdtempSync(join(tmpdir(), 'cairn-keychain-'));
   scratch = root;
-  const dataDir = join(root, 'data');
-  mkdirSync(dataDir, { recursive: true });
-  // Point resolvePaths().data at the scratch directory on all three OSes.
-  // Linux uses XDG_DATA_HOME, macOS/Windows read from HOME/APPDATA.
-  process.env.XDG_DATA_HOME = root;
-  process.env.APPDATA = root;
   process.env.HOME = root;
   process.env.USERPROFILE = root;
-  process.env.XDG_STATE_HOME = root;
-  process.env.XDG_CACHE_HOME = root;
-  process.env.LOCALAPPDATA = root;
+  process.env.XDG_CACHE_HOME = join(root, '.cache');
+  process.env.XDG_STATE_HOME = join(root, '.local', 'state');
+
+  let dataDir: string;
+  if (process.platform === 'win32') {
+    const roaming = join(root, 'Roaming');
+    process.env.APPDATA = roaming;
+    process.env.LOCALAPPDATA = join(root, 'Local');
+    dataDir = join(roaming, 'Cairn');
+  } else if (process.platform === 'darwin') {
+    dataDir = join(root, 'Library', 'Application Support', 'Cairn');
+  } else {
+    const share = join(root, '.local', 'share');
+    process.env.XDG_DATA_HOME = share;
+    dataDir = join(share, 'cairn');
+  }
+  mkdirSync(dataDir, { recursive: true });
   return dataDir;
 }
 
@@ -55,8 +63,10 @@ function findFilesRecursive(dir: string): string[] {
   return out;
 }
 
-beforeEach(() => {
-  process.env = { ...ORIGINAL_ENV };
+beforeEach(async () => {
+  process.env = { ...ORIGINAL_ENV, CAIRN_FORCE_KEYCHAIN_FALLBACK: '1' };
+  const mod = await import('../../src/shared/keychain');
+  mod.resetKeychainModuleCacheForTests();
 });
 
 afterEach(() => {

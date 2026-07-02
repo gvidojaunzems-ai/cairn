@@ -29,3 +29,4 @@ export {
   type VectorEntityType,
 } from './schema.js';
 export * from './dao/index.js';
+export { createFixtureDao } from './fixtures/fixture-dao.js';

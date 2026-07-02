@@ -33,6 +33,10 @@ export interface SeedResult {
    * Absent when a runner does not compute a breakdown.
    */
   perEntity?: Readonly<Record<string, number>>;
+  /**
+   * Alias for `perEntity` — retained for S7 CI parser compatibility.
+   */
+  details?: Readonly<Record<string, number>>;
 }
 
 /**

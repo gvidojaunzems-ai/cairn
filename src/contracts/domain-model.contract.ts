@@ -141,6 +141,180 @@ export interface Ticket {
   updatedAt: string;
 }
 
+/** Lifecycle state for a Signal (wip_signals table). */
+export type SignalStatus = 'active' | 'resolved' | 'muted';
+
+/**
+ * A "work in progress" signal surfaced from git activity. Maps to the
+ * `wip_signals` table (entity_id + entity_type + summary).
+ */
+export interface Signal {
+  id: string;
+  entityId: string;
+  entityType: string;
+  summary: string;
+  status: SignalStatus;
+  source?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Lifecycle state for a Decision. */
+export type DecisionStatus = 'proposed' | 'accepted' | 'rejected' | 'superseded';
+
+/**
+ * A recorded decision scoped to a project (ADR mirror, lightweight log).
+ */
+export interface Decision {
+  id: string;
+  projectId?: string;
+  title: string;
+  body: string;
+  status: DecisionStatus;
+  decidedBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Curated topic that groups news items.
+ */
+export interface NewsTopic {
+  id: string;
+  name: string;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Meeting record — agenda, attendees, and outcome notes.
+ */
+export interface Meeting {
+  id: string;
+  projectId?: string;
+  title: string;
+  attendeeIds: readonly string[];
+  agenda?: string;
+  outcome?: string;
+  startedAt?: string;
+  endedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Lifecycle state for an ActionItem. */
+export type ActionItemStatus = 'open' | 'in_progress' | 'done' | 'cancelled';
+
+/**
+ * Action item surfaced from a meeting.
+ */
+export interface ActionItem {
+  id: string;
+  meetingId?: string;
+  ownerId?: string;
+  description: string;
+  status: ActionItemStatus;
+  dueDate?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Free-form update attached to a project (status update, weekly note).
+ */
+export interface Update {
+  id: string;
+  projectId: string;
+  authorId?: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Rendered report (weekly summary, project retrospective).
+ */
+export interface Report {
+  id: string;
+  projectId?: string;
+  title: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * RSS / Atom / GitHub feed Cairn polls for news items.
+ */
+export interface Feed {
+  id: string;
+  name: string;
+  url: string;
+  feedType: string;
+  enabled: boolean;
+  lastFetchedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Ledger entry for tracking project spend.
+ */
+export interface BudgetLedgerEntry {
+  id: string;
+  projectId?: string;
+  amount: number;
+  currency: string;
+  description?: string;
+  ledgerDate: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Lifecycle state for a background Job. */
+export type JobStatus = 'pending' | 'running' | 'done' | 'failed' | 'cancelled';
+
+/**
+ * Background job orchestrated by the main process (fetch feeds, embeddings).
+ */
+export interface Job {
+  id: string;
+  jobType: string;
+  status: JobStatus;
+  payload?: string;
+  error?: string;
+  startedAt?: string;
+  completedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Per-entity cursor tracking for external syncs (git, GitHub, RSS).
+ */
+export interface SyncState {
+  id: string;
+  entityType: string;
+  lastSyncedAt?: string;
+  cursor?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Application tracked by the squad (dashboard, integration, third-party tool).
+ */
+export interface App {
+  id: string;
+  name: string;
+  url?: string;
+  category?: string;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 /** Lifecycle state for a WipSignal. */
 export type WipSignalStatus = 'new' | 'acknowledged' | 'stale' | 'resolved';
 
@@ -163,7 +337,7 @@ export interface WipSignal {
  * A vector row backing sqlite-vec / vec0. `embedding` is stored as a Float32
  * buffer at rest but exposed as a numeric array at the contract boundary.
  */
-export interface Vector {
+export interface VectorRecord {
   id: string;
   /** e.g. 'project', 'doc', 'knowledge_item' — feeds metadata filters. */
   entityType: string;
@@ -177,6 +351,9 @@ export interface Vector {
   model?: string;
   createdAt: string;
 }
+
+/** Backward-compatible alias for early fixture modules. */
+export type Vector = VectorRecord;
 
 /**
  * A tag attached to any entity by (entityType, entityId).

@@ -54,6 +54,12 @@ export class NewerSchemaVersionError extends Error {
   }
 }
 
+/** Backward-compatible alias for bootstrap and contract tests (S8). */
+export { NewerSchemaVersionError as NewerSchemaError };
+
+/** Sentinel string checked by migration contract tests. */
+export const NEWER_SCHEMA_ERROR = 'NewerSchemaVersionError';
+
 export interface RunMigrationsOptions {
   /**
    * Absolute path to the DB file on disk. Required so the runner can copy

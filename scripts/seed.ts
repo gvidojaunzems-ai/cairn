@@ -41,14 +41,21 @@ export const stubRunner: SeedRunner = {
  */
 export const fixtureRunner: SeedRunner = new FixtureSeedRunner();
 
+/** Preferred export name for S7 contract tests. */
+export const seedRunner = fixtureRunner;
+
 /**
  * Entry point. Runs `runner.run()` and prints a JSON summary. Exit code 0 on
  * success — non-zero on unexpected failure (see the CLI guard below).
  */
 export async function main(runner: SeedRunner = fixtureRunner): Promise<SeedResult> {
   const result = await runner.run();
-  process.stdout.write(`${JSON.stringify(result)}\n`);
-  return result;
+  const output: SeedResult = {
+    ...result,
+    details: result.details ?? result.perEntity,
+  };
+  process.stdout.write(`${JSON.stringify(output)}\n`);
+  return output;
 }
 
 // Direct-execution guard: only auto-run when invoked as the script entry,
