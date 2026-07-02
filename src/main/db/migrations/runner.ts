@@ -152,7 +152,8 @@ function applyOne(db: Database.Database, migration: Migration): void {
 
 /**
  * Run all pending migrations against `db`. Refuses to run when the DB is at
- * a higher schema version than this build knows about.
+ * a higher schema version than this build knows about. Returns the number of
+ * migrations applied (0 when already up to date).
  */
 export function runMigrations(db: Database.Database, options: RunMigrationsOptions = {}): number {
   const migrations = options.migrations ?? MIGRATIONS;
@@ -165,12 +166,12 @@ export function runMigrations(db: Database.Database, options: RunMigrationsOptio
     throw new NewerSchemaVersionError(dbVersion, codeVersion, integrity);
   }
   if (dbVersion === codeVersion) {
-    return dbVersion;
+    return 0;
   }
 
   const pending = migrations.filter((m) => m.version > dbVersion);
   if (pending.length === 0) {
-    return dbVersion;
+    return 0;
   }
 
   const backupPath = backupDatabase(db, options.dbPath);
@@ -186,5 +187,5 @@ export function runMigrations(db: Database.Database, options: RunMigrationsOptio
     applyOne(db, migration);
   }
 
-  return readDbSchemaVersion(db);
+  return pending.length;
 }

@@ -87,6 +87,11 @@ function chunk<T>(records: readonly T[], size: number): T[][] {
   return chunks;
 }
 
+/** vec0 rowids must bind as SQLite integers — BigInt avoids Node 20 type quirks. */
+function toVecRowid(rowid: number): bigint {
+  return BigInt(rowid);
+}
+
 export interface VectorsDao {
   upsert(record: VectorRecord): void;
   get(entityType: string, entityId: string): VectorRecord | undefined;
@@ -115,13 +120,13 @@ export function createVectorsDao(db: Database.Database): VectorsDao {
   const deleteMetaStmt = db.prepare<[string, string]>(
     `DELETE FROM ${VECTOR_METADATA_TABLE} WHERE entity_type = ? AND entity_id = ?`,
   );
-  const insertVecStmt = db.prepare<[number, Buffer]>(
+  const insertVecStmt = db.prepare<[bigint, Buffer]>(
     `INSERT INTO ${VEC_ITEMS_TABLE} (rowid, embedding) VALUES (?, ?)`,
   );
-  const deleteVecStmt = db.prepare<[number]>(
+  const deleteVecStmt = db.prepare<[bigint]>(
     `DELETE FROM ${VEC_ITEMS_TABLE} WHERE rowid = ?`,
   );
-  const getVecStmt = db.prepare<[number]>(
+  const getVecStmt = db.prepare<[bigint]>(
     `SELECT embedding FROM ${VEC_ITEMS_TABLE} WHERE rowid = ?`,
   );
   // sqlite-vec vec0 virtual tables surface `distance` automatically when a
@@ -142,8 +147,9 @@ export function createVectorsDao(db: Database.Database): VectorsDao {
   function writeVector(rowid: number, embedding: Buffer): void {
     // vec0 rows are keyed by rowid — delete then insert is the documented
     // upsert path for sqlite-vec 0.1.x.
-    deleteVecStmt.run(rowid);
-    insertVecStmt.run(rowid, embedding);
+    const vecRowid = toVecRowid(rowid);
+    deleteVecStmt.run(vecRowid);
+    insertVecStmt.run(vecRowid, embedding);
   }
 
   function upsert(record: VectorRecord): void {
@@ -230,7 +236,7 @@ export function createVectorsDao(db: Database.Database): VectorsDao {
   function get(entityType: string, entityId: string): VectorRecord | undefined {
     const meta = findMetaStmt.get(entityType, entityId) as MetadataRow | undefined;
     if (meta === undefined) return undefined;
-    const row = getVecStmt.get(meta.rowid) as { embedding: Buffer } | undefined;
+    const row = getVecStmt.get(toVecRowid(meta.rowid)) as { embedding: Buffer } | undefined;
     if (row === undefined) return undefined;
     const view = new Float32Array(
       row.embedding.buffer,
@@ -256,7 +262,7 @@ export function createVectorsDao(db: Database.Database): VectorsDao {
   function del(entityType: string, entityId: string): boolean {
     const meta = findMetaStmt.get(entityType, entityId) as MetadataRow | undefined;
     if (meta === undefined) return false;
-    deleteVecStmt.run(meta.rowid);
+    deleteVecStmt.run(toVecRowid(meta.rowid));
     const info = deleteMetaStmt.run(entityType, entityId);
     return info.changes > 0;
   }
