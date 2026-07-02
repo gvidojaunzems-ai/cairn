@@ -10,7 +10,13 @@
  *          so uncaught errors during startup still land in the log.
  *       2. createDirectories(resolvePaths()) — ensure the data/cache/logs
  *          directories exist before the logger writes its first line.
- *       3. createMainWindow() — only after the environment is ready.
+ *       3. openLocalStore() — placeholder hook; the real DB open lives in
+ *          `src/main/data/db.ts` (owned by the database assignment).
+ *       4. registerIpcChannels() — including the new namespaced router
+ *          from `src/main/ipc/register-handlers.ts`.
+ *       5. createMainWindow() — only after the environment is ready.
+ *       6. Lazy job manager / worker init — deferred to the first
+ *          non-`system.*` op so `system.getStatus` stays under 100 ms.
  *   - Security posture: BrowserWindow ALWAYS uses contextIsolation:true and
  *     sandbox:true. The preload script is the only bridge; the renderer
  *     never sees a raw ipcRenderer.
@@ -23,6 +29,8 @@ import { dirname, join } from 'node:path';
 
 import { registerErrorBoundary } from './error-boundary.js';
 import { createDirectories, resolvePaths } from '../shared/paths.js';
+import { registerIpcHandlers } from './ipc/register-handlers.js';
+import { createEventBus, type EventBus } from './ipc/event-bus.js';
 
 export const WINDOW_TITLE = 'Cairn';
 export const RESTART_APP_CHANNEL = 'restart-app';
@@ -61,13 +69,48 @@ function createMainWindow(): BrowserWindow {
   return window;
 }
 
-function registerIpcChannels(): void {
+/**
+ * Legacy restart channel — kept as `ipcMain.on` because it is fire-and-
+ * forget from the renderer.
+ */
+function registerRestartChannel(): void {
   // Renderer -> main: request a full app restart (used by the React error
   // boundary "Restart" button).
   ipcMain.on(RESTART_APP_CHANNEL, () => {
     app.relaunch();
     app.exit(0);
   });
+}
+
+/**
+ * Placeholder for the local store open step. The real implementation is
+ * owned by `src/main/data/db.ts` (database assignment); calling it here
+ * is a no-op until that lands.
+ */
+function openLocalStore(): void {
+  // Intentionally left blank — see the database assignment for the
+  // real open path (`openLocalStore()` in `src/main/data/db.ts`).
+}
+
+let cachedEventBus: EventBus | undefined;
+
+/**
+ * Lazily construct the event bus. Kept lazy so tests that only need to
+ * exercise the router don't spin up the Electron `webContents` module.
+ */
+export function getEventBus(): EventBus {
+  if (!cachedEventBus) {
+    cachedEventBus = createEventBus();
+  }
+  return cachedEventBus;
+}
+
+function registerIpcChannels(): void {
+  registerRestartChannel();
+  // The namespaced router owns every declared `namespace.op` handler.
+  // Passing no `jobManager` means `jobs.*` responds with `not_implemented`
+  // until the worker is lazily initialised on the first job.start call.
+  registerIpcHandlers();
 }
 
 /**
@@ -78,6 +121,7 @@ export function bootstrap(): void {
   // Order matters — see the module JSDoc.
   registerErrorBoundary();
   createDirectories(resolvePaths());
+  openLocalStore();
   registerIpcChannels();
   createMainWindow();
 }

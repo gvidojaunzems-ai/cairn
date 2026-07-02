@@ -54,14 +54,21 @@ better-sqlite3 binary and the sqlite-vec extension to be on disk.
 | Path | Purpose |
 |------|---------|
 | `src/main/` | Electron main-process code (IPC, window lifecycle, error boundary). |
-| `src/preload/` | Preload script exposing a minimal typed API to the renderer. |
+| `src/main/ipc/` | Namespaced IPC router, Zod validation, event bus, `CoreServiceError` factory. |
+| `src/main/services/` | 16 per-namespace service objects (mostly `not_implemented` stubs). |
+| `src/main/workers/` | `node:worker_threads` background-worker script. |
+| `src/main/jobs/` | `JobManager`, job registry, sample-long-job fixture, worker message shapes. |
+| `src/main/data/` | better-sqlite3 handle, migration runner, `JobsDao`. |
+| `src/preload/` | Preload script exposing the typed `window.cairn` bridge to the renderer. |
 | `src/renderer/` | UI layer: React app, hooks, global CSS. |
+| `src/renderer/ipc/` | Renderer-side typed `CairnRendererClient` + `useCoreService` hook. |
 | `src/shared/` | Cross-process utilities (paths, logger, feature flags, i18n stub). |
+| `src/shared/ipc/` | IPC descriptor layer — 16 op namespaces, 10 event names, `apiVersion`, Zod schemas. |
 | `src/contracts/` | Five stable contract placeholders — extend additively. |
 | `tests/` | Vitest suites mirroring `src/`, plus meta/CI/docs checks. |
 | `scripts/` | Node scripts (`seed.ts`, `notarize.js`, `verify-native-modules.ts`). |
 | `build/` | electron-builder resources (icon, entitlements). |
-| `docs/` | ADRs and architecture docs. See `docs/adr/0001-stack.md`. |
+| `docs/` | ADRs and architecture docs. See `docs/adr/0001-stack.md` + `docs/architecture/service-api.md`. |
 | `dist/installers/` | Packaged installers (git-ignored). |
 | `out/` | Compiled bundles (git-ignored). |
 
@@ -120,8 +127,50 @@ each is a repeatable trap worth knowing before you file a bug.
   sweep, nested contexts). If a legitimate value looks like a secret
   (`sk-*`, `ghp_*`, `Bearer *`, long hex/base64), it will be masked in logs.
 
+## IPC service surface
+
+The renderer talks to core over a typed IPC bridge exposed as
+`window.cairn` in `src/preload/index.ts`. The full surface — 16 op
+namespaces, 10 server → UI events, the `apiVersion` handshake constant,
+and the `CoreServiceResult<T>` shape — is enumerated in
+[`docs/architecture/service-api.md`](docs/architecture/service-api.md).
+That document is generated verbatim from `src/shared/ipc/operations.ts`,
+`src/shared/ipc/events.ts`, and `src/shared/ipc/api-version.ts`; the
+parity test at `tests/docs/service-api.test.ts` fails if it drifts.
+
+Business logic is still stubbed on most namespaces — every stub returns
+`{ ok:false, error:{ code:'not_implemented' } }` uniformly. Only
+`system.getStatus`, `system.getApiVersion`, `jobs.start`, and
+`jobs.cancel` are wired end-to-end at foundation time.
+
+### Runtime dependency note
+
+`zod@3.23.8` is now a runtime dependency (validated inputs at the IPC
+boundary via `src/shared/ipc/schemas.ts`). It is externalised in the
+main bundle by `electron.vite.config.ts`; the renderer bundle must NOT
+import it (the architecture lint test at
+`tests/meta/architecture-lint.test.ts` enforces this).
+
+### Local-store schema v2
+
+`LocalStoreSchema.version` bumped from `1` to `2`. The v2 addition is
+the `jobs` SQLite table (see ADR 0004). The migration runner at
+`src/main/data/migrations/` idempotently creates the table on first
+upgrade; only the main thread writes to it (see ADR 0002).
+
 ## Architecture
 
 See [`docs/adr/0001-stack.md`](docs/adr/0001-stack.md) for the stack decision
 and rejected alternatives, and [`docs/architecture/repo-layout.md`](docs/architecture/repo-layout.md)
 for the full directory layout.
+
+New ADRs landed with the IPC transport work package:
+
+- [`docs/adr/0002-ipc-transport-and-worker.md`](docs/adr/0002-ipc-transport-and-worker.md)
+  — `ipcMain.handle` + `contextBridge` + `node:worker_threads`, plus the
+  single-writer better-sqlite3 invariant.
+- [`docs/adr/0003-core-service-result-typed-errors.md`](docs/adr/0003-core-service-result-typed-errors.md)
+  — the discriminated `CoreServiceError` taxonomy and the additive
+  extension of `CoreServiceResult<T>`.
+- [`docs/adr/0004-local-store-jobs-table.md`](docs/adr/0004-local-store-jobs-table.md)
+  — the `jobs` row shape and the `LocalStoreSchema` v2 bump.

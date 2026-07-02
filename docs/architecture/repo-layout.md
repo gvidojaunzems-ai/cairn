@@ -26,12 +26,26 @@ The Electron main process — window lifecycle, IPC handlers, platform
 integration.
 
 - `src/main/index.ts` — bootstrap. Registers the error boundary, creates
-  data/cache/logs directories, wires IPC channels, then constructs the
-  `BrowserWindow` with `contextIsolation: true` + `sandbox: true`.
+  data/cache/logs directories, opens the local store, registers the
+  namespaced IPC router, then constructs the `BrowserWindow` with
+  `contextIsolation: true` + `sandbox: true`.
 - `src/main/error-boundary.ts` — process-level `uncaughtException` and
   `unhandledRejection` handlers that funnel through the shared logger.
+- `src/main/ipc/` — the IPC transport layer. `router.ts` dispatches
+  `namespace.op` calls, `validate.ts` runs Zod schemas at the boundary,
+  `event-bus.ts` fans server → UI events out via `webContents.send`,
+  `errors.ts` centralises `CoreServiceError` construction.
+- `src/main/services/` — per-namespace service stubs (16 files). Each
+  exports a stable object; every stub returns `not_implemented` uniformly.
+- `src/main/workers/` — the `node:worker_threads` background worker
+  script (`background.worker.ts`).
+- `src/main/jobs/` — main-thread `JobManager`, sample-long-job fixture,
+  job-registry, and worker message shapes.
+- `src/main/data/` — better-sqlite3 handle + DAO layer (owned by the
+  database task; DAOs used by the job manager live here).
 - `src/preload/index.ts` — the ONLY IPC bridge. Exposes a typed
-  `window.cairn` surface via `contextBridge.exposeInMainWorld`.
+  `window.cairn` surface (`invoke`, `on`, `off`, `restartApp`) via
+  `contextBridge.exposeInMainWorld`.
 
 ## Platform / data layer
 
@@ -46,6 +60,11 @@ Cross-process utilities and the on-disk footprint.
 - `src/shared/i18n.ts` — `t()` stub with a fallback-key registry.
 - `src/shared/keychain.ts` — Result-shape stub; real adapter is
   `@napi-rs/keyring` per ADR 0001.
+- `src/shared/ipc/` — the IPC descriptor layer consumed by preload and
+  main: `operations.ts` (16 op namespaces + typed request/response
+  descriptors), `events.ts` (10 event names + payload types),
+  `api-version.ts` (transport version constant), `schemas.ts` (Zod input
+  schemas — main-only; NOT re-exported from the barrel).
 
 ## Shared types / contracts
 

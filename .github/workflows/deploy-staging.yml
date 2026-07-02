@@ -1,0 +1,73 @@
+# Staging deploy — runs on every PR that touches Terraform. Authenticates to
+# GCP via Workload Identity Federation (no long-lived keys). Terraform inputs
+# come from GitHub repo variables (TF_VAR_*), so nothing environment-specific
+# is committed.
+#
+# Cairn is a desktop app — this workflow does NOT build a container image.
+# It only applies the storage-bucket + runtime-SA stack that hosts installer
+# artifacts (see deploy/README.md).
+#
+# Set these once under Settings → Secrets and variables → Actions → Variables:
+#   GCP_WIF_PROVIDER, GCP_DEPLOY_SA, GCP_REGION, GCP_PROJECT_STAGING
+#
+# Security: every `uses:` MUST be pinned to a full 40-char commit SHA per
+# .claude/rules/general/security-practices.md. Verify each SHA against the
+# pinned semver tag before enabling this workflow on GitHub — the tag comment
+# is the drift indicator.
+
+name: Deploy Staging
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'deploy/**'
+      - '.github/workflows/deploy-staging.yml'
+
+permissions:
+  contents: read
+  id-token: write # required for Workload Identity Federation
+
+concurrency:
+  group: staging-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    # Same-repo PRs only — fork PRs can't hold the WIF/repo-variable trust and
+    # must not trigger a staging apply.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    environment: staging
+    env:
+      # Terraform variables — single source of truth is the repo variables, not
+      # a committed tfvars file. Terraform auto-reads TF_VAR_<name>.
+      TF_VAR_project_id: ${{ vars.GCP_PROJECT_STAGING }}
+      TF_VAR_region: ${{ vars.GCP_REGION }}
+      TF_VAR_env: staging
+    defaults:
+      run:
+        working-directory: deploy/terraform/environments/staging
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Authenticate to GCP (WIF)
+        uses: google-github-actions/auth@8254fb75a33b976a221574d287e93919e6a36f70 # v2.1.10
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SA }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: "1.9.5"
+
+      - name: Terraform init
+        run: terraform init -input=false
+
+      - name: Terraform plan
+        run: terraform plan -input=false -out=tfplan
+
+      - name: Terraform apply
+        run: terraform apply -input=false tfplan

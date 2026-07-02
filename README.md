@@ -46,6 +46,32 @@ the canonical directory layout, and [`docs/adr/0001-stack.md`](docs/adr/0001-sta
 for the stack decision, rejected alternatives, and the intended keychain
 adapter.
 
+## IPC service API
+
+The renderer talks to core exclusively over the typed
+`window.cairn` bridge exposed by `src/preload/index.ts`. The full
+surface — 16 op namespaces, 10 server → UI events, the `apiVersion`
+handshake, and the `CoreServiceResult<T>` shape — is enumerated in
+[`docs/architecture/service-api.md`](docs/architecture/service-api.md).
+
+Design decisions for the transport and background-job model are captured
+in:
+
+- [`docs/adr/0002-ipc-transport-and-worker.md`](docs/adr/0002-ipc-transport-and-worker.md)
+  — `ipcMain.handle` + preload `contextBridge` + `node:worker_threads`
+  and the single-writer better-sqlite3 invariant.
+- [`docs/adr/0003-core-service-result-typed-errors.md`](docs/adr/0003-core-service-result-typed-errors.md)
+  — the discriminated `CoreServiceError` taxonomy (`validation_error`,
+  `not_found`, `conflict`, `unavailable`, `forbidden`, `internal`,
+  `not_implemented`).
+- [`docs/adr/0004-local-store-jobs-table.md`](docs/adr/0004-local-store-jobs-table.md)
+  — the `LocalStoreSchema` v2 bump and the `jobs` row shape.
+
+Business logic on most namespaces is still stubbed and returns
+`{ ok:false, error:{ code:'not_implemented' } }` uniformly. Only
+`system.getStatus`, `system.getApiVersion`, `jobs.start`, and
+`jobs.cancel` have real implementations at foundation time.
+
 ## Contributing
 
 Open [`HANDOFF.md`](HANDOFF.md) for a developer-focused run/build/test

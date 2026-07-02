@@ -1,0 +1,66 @@
+# Production deploy — gated. Runs only on a version tag (or manual dispatch),
+# and the `production` GitHub Environment should require a manual reviewer
+# approval. Same WIF auth as staging; never auto-applies from a PR.
+#
+# Cairn is a desktop app — this workflow does NOT build a container image.
+# It only applies the storage-bucket + runtime-SA stack that hosts installer
+# artifacts (see deploy/README.md).
+#
+# Terraform inputs come from GitHub repo variables (TF_VAR_*) — nothing
+# environment-specific is committed.
+#
+# Security: every `uses:` MUST be pinned to a full 40-char commit SHA per
+# .claude/rules/general/security-practices.md. Verify each SHA against the
+# pinned semver tag before enabling this workflow on GitHub — the tag comment
+# is the drift indicator.
+
+name: Deploy Production
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # required for Workload Identity Federation
+
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+jobs:
+  deploy-production:
+    runs-on: ubuntu-latest
+    # Protect this environment in repo settings: require reviewers before run.
+    environment: production
+    env:
+      TF_VAR_project_id: ${{ vars.GCP_PROJECT_PRODUCTION }}
+      TF_VAR_region: ${{ vars.GCP_REGION }}
+      TF_VAR_env: production
+    defaults:
+      run:
+        working-directory: deploy/terraform/environments/production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Authenticate to GCP (WIF)
+        uses: google-github-actions/auth@8254fb75a33b976a221574d287e93919e6a36f70 # v2.1.10
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SA }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: "1.9.5"
+
+      - name: Terraform init
+        run: terraform init -input=false
+
+      - name: Terraform plan
+        run: terraform plan -input=false -out=tfplan
+
+      - name: Terraform apply
+        run: terraform apply -input=false tfplan
