@@ -1,37 +1,209 @@
 /**
  * Minimal i18n stub — `t()` returns the key by default with an optional
  * per-key English fallback map.
- *
- * Business rules:
- *   - All user-facing strings in the renderer MUST route through `t()` so
- *     later tasks can swap in a real i18n library (i18next, format.js, etc.)
- *     without touching call sites.
- *   - The `keys` registry is deliberately exported so extraction tooling
- *     (e.g. a future `pnpm i18n:extract` step) can enumerate every key
- *     without static analysis of the whole codebase.
- */
-
-/**
- * Fallback English copy per key. Keeping this as an explicit map (rather than
- * inline defaults) makes it trivial to hand off to a translator later.
  */
 export const keys = {
   'app.mainLandmark': 'Cairn',
   'app.restartButton': 'Restart',
   'app.errorFallbackTitle': 'Something went wrong',
-  'app.errorFallbackBody':
-    'Cairn hit an unexpected error. Restart the app to continue.',
+  'app.errorFallbackBody': 'Cairn hit an unexpected error. Restart the app to continue.',
+  'errorBoundary.landmarkLabel': 'Application error',
+  'errorBoundary.fallbackMessage': 'Something went wrong. Please restart Cairn.',
+
+  'shell.explain': 'Explain',
+  'shell.user': 'User',
+  'shell.nav': 'Main navigation',
+
+  'nav.today': 'Today',
+  'nav.dailies': 'Dailies',
+  'nav.meetings': 'Meetings',
+  'nav.projects': 'PoC Projects',
+  'nav.news': 'News & Knowledge',
+  'nav.reports': 'Reports',
+  'nav.pulse': 'Team Pulse',
+  'nav.docs': 'Docs Hub',
+  'nav.support': 'Support & Apps',
+  'nav.setup': 'Setup',
+  'nav.settings': 'Settings & AI',
+  'nav.group.daily': 'Daily',
+  'nav.group.produce': 'Produce',
+  'nav.group.operate': 'Operate',
+  'nav.group.configure': 'Configure',
+
+  'sync.offline': 'Offline cache',
+  'sync.unknown': 'Sync',
+
+  'loading': 'Loading…',
+  'error.unknown': 'Unknown error',
+  'action.refresh': 'Refresh',
+  'action.cancel': 'Cancel',
+  'action.save': 'Save',
+  'action.create': 'Create',
+
+  'today.loading': 'Loading dashboard…',
+  'today.empty': 'No dashboard data',
+  'today.focus': 'Current PoC focus',
+  'today.focusExplain.title': 'Focus strip',
+  'today.focusExplain.text': 'Shows burndown and goal alignment for your active PoC.',
+  'today.focusExplain.how': 'Derived from git activity and charter goals.',
+  'today.deadline': 'Deadline in',
+  'today.days': 'days',
+  'today.burndown': 'Burndown',
+  'today.alignment': 'Goal alignment',
+  'today.standup': 'Standup draft',
+  'today.localFree': 'local · free',
+  'today.attention': 'Needs attention',
+  'today.allClear': 'All clear',
+  'today.squad': 'Squad right now',
+  'today.news': 'AI news for you',
+  'today.checks': 'My checks',
+  'today.todos': 'TODO / FIXME',
+  'today.contextResume': 'Context resume',
+  'today.branch': 'Branch',
+  'today.resume': 'Resume work',
+  'today.customize': 'Customize',
+  'today.customizeTitle': 'Customize dashboard',
+  'today.approveStandup': 'Approve & push',
+  'today.regenerate': 'Regenerate',
+  'today.stats.pocs': 'Active PoCs',
+  'today.stats.unpushed': 'Unpushed',
+  'today.stats.budget': 'Budget',
+  'today.stats.tokens': 'Tokens today',
+
+  'projects.new': 'New PoC',
+  'projects.newTitle': 'New PoC project',
+  'projects.name': 'Name',
+  'projects.empty': 'No projects yet',
+  'projects.selectOne': 'Select a project',
+  'projects.charter': 'Charter',
+  'projects.drift': 'Drift detected',
+  'projects.listExplain.title': 'PoC list',
+  'projects.listExplain.text': 'Active proof-of-concept projects with charter and drift status.',
+
+  'dailies.pack': 'Standup pack',
+  'dailies.wip': 'WIP radar',
+  'dailies.actions': 'Action items',
+  'dailies.person': 'Person',
+  'dailies.summary': 'Summary',
+  'dailies.unpushed': 'Unpushed',
+  'dailies.nudge': 'Nudge',
+  'dailies.noWip': 'No active WIP signals',
+  'dailies.noActions': 'No open action items',
+  'dailies.noPack': 'No standup pack for today',
+  'dailies.yesterday': 'Yesterday',
+  'dailies.today': 'Today',
+  'dailies.blockers': 'Blockers',
+  'dailies.done': 'Done',
+  'dailies.reopen': 'Reopen',
+  'dailies.wipExplain.title': 'WIP radar',
+  'dailies.wipExplain.text': 'Metadata-only view of teammates unpushed work.',
+
+  'meetings.start': 'Start meeting listener',
+  'meetings.title': 'Meeting title',
+  'meetings.consent': 'I consent to on-device transcription',
+  'meetings.startBtn': 'Start',
+  'meetings.stop': 'Stop',
+  'meetings.live': 'Live transcript',
+  'meetings.listening': 'Listening…',
+  'meetings.recording': 'Recording',
+  'meetings.proposals': 'Proposals review',
+  'meetings.noProposals': 'No proposals yet',
+  'meetings.apply': 'Apply',
+  'meetings.applyAll': 'Apply all',
+  'meetings.consentExplain.title': 'Consent',
+  'meetings.consentExplain.text': 'Audio stays on-device and is discarded after transcription.',
+
+  'news.noSummary': 'No summary',
+  'news.save': 'Save',
+  'news.read': 'Read',
+  'news.empty': 'No news items',
+  'news.knowledge': 'Knowledge',
+  'news.noKnowledge': 'No saved knowledge yet',
+  'news.filterExplain.title': 'Filters',
+  'news.filterExplain.text': 'Filter the AI news feed by topic.',
+
+  'docs.tree': 'Document tree',
+  'docs.empty': 'No documents',
+  'docs.selectOne': 'Select a document',
+  'docs.title': 'Title',
+  'docs.body': 'Body',
+  'docs.sync': 'Sync repos',
+  'docs.ask': 'Ask this doc',
+  'docs.askPlaceholder': 'Ask a question…',
+  'docs.askBtn': 'Ask',
+  'docs.noAnswer': 'No answer',
+  'docs.treeExplain.title': 'Doc tree',
+  'docs.treeExplain.text': 'Browse team docs imported from repos and manual pages.',
+
+  'reports.empty': 'No templates',
+  'reports.selectTemplate': 'Select a template',
+  'reports.useClaude': 'Use Claude (polished)',
+  'reports.claude': 'Claude · metered',
+  'reports.generate': 'Generate',
+  'reports.templatesExplain.title': 'Templates',
+  'reports.templatesExplain.text': 'Pre-built report formats for squad status and retros.',
+
+  'pulse.mood': 'Mood',
+  'pulse.highlights': 'Highlights',
+  'pulse.risks': 'Risks',
+  'pulse.shipped': 'Shipped',
+  'pulse.stalled': 'Stalled',
+  'pulse.empty': 'No pulse data',
+  'pulse.heatmap': 'Activity heatmap',
+  'pulse.generateDigest': 'Generate weekly digest',
+  'pulse.digestQueued': 'Digest job queued',
+  'pulse.stats.standups': 'Standups',
+  'pulse.stats.commits': 'Commits',
+  'pulse.stats.prs': 'PRs',
+  'pulse.moodExplain.title': 'Team mood',
+  'pulse.moodExplain.text': 'Derived from standup tone, WIP signals, and shipping velocity.',
+
+  'support.apps': 'Background apps',
+  'support.noApps': 'No apps registered',
+  'support.inbox': 'Ticket inbox',
+  'support.noTickets': 'No tickets',
+  'support.title': 'Title',
+  'support.status': 'Status',
+  'support.actions': 'Actions',
+  'support.triage': 'Triage',
+  'support.resolve': 'Resolve',
+  'support.appsExplain.title': 'Apps',
+  'support.appsExplain.text': 'Long-running squad apps monitored by Cairn.',
+
+  'settings.budget': 'Claude budget',
+  'settings.tokens': 'tokens this week',
+  'settings.localDefault': 'AI defaults to local Ollama; Claude requires explicit opt-in.',
+  'settings.empty': 'No settings',
+  'settings.models': 'Models',
+  'settings.noModels': 'No models configured',
+  'settings.qualityFallback': 'Quality fallback to Claude',
+  'settings.budgetUsed': 'Budget used',
+  'settings.connectors': 'Connectors',
+  'settings.test': 'Test',
+  'settings.connectorOk': 'OK',
+  'settings.feeds': 'News feeds',
+  'settings.feedsHint': 'Configure RSS feeds in team repo cairn.config.yaml',
+  'settings.privacy': 'Privacy',
+  'settings.privacy1': 'No code in WIP signals',
+  'settings.privacy2': 'Meeting audio stays on-device',
+  'settings.privacy3': 'Secrets in OS keychain only',
+  'settings.privacy4': 'Claude only on explicit action',
+  'settings.modelsExplain.title': 'AI models',
+  'settings.modelsExplain.text': 'Local Ollama is default; Claude is opt-in and metered.',
+
+  'setup.welcome': 'Welcome to Cairn',
+  'setup.body': 'Local-first squad tooling. Fixtures seed automatically on first run.',
+  'setup.step': 'Step',
+  'setup.people': 'people',
+  'setup.complete': 'Complete setup',
+  'setup.wizard': 'Setup wizard',
+  'setup.next': 'Next',
+  'setup.finish': 'Finish',
+  'setup.completeMsg': 'Setup complete!',
 } as const;
 
 export type TranslationKey = keyof typeof keys;
 
-/**
- * Look up the translation for `key`.
- *
- * - When `key` is registered in `keys`, returns its English fallback.
- * - Otherwise returns `fallback` if provided, else the raw `key` (so missing
- *   translations are visible during development without crashing the UI).
- */
 export function t(key: string, fallback?: string): string {
   const registryValue = (keys as Record<string, string>)[key];
   if (typeof registryValue === 'string') {

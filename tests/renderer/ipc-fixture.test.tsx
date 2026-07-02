@@ -38,7 +38,7 @@ function makeShim(): {
 
   const api: CairnPreloadAPI = {
     restartApp: vi.fn(),
-    apiVersion: '1.0.0',
+    apiVersion: '2.0.0',
     invoke: (async <TReq = unknown, TRes = unknown>(
       namespace: NamespaceName,
       op: string,
@@ -48,13 +48,13 @@ function makeShim(): {
         return {
           ok: true,
           data: { ready: true } as unknown as TRes,
-          apiVersion: '1.0.0',
+          apiVersion: '2.0.0',
         };
       }
       return {
         ok: false,
         error: { code: 'not_implemented', message: 'stub' },
-        apiVersion: '1.0.0',
+        apiVersion: '2.0.0',
       };
     }) as CairnPreloadAPI['invoke'],
     on: (<E extends EventName>(

@@ -17,7 +17,7 @@
  * without leaking artefacts under the OS temp dir.
  */
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, expect, it } from 'vitest';
 import Database from 'better-sqlite3';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -26,6 +26,7 @@ import {
   resolveSqliteVecExtensionPath,
   verifyNativeModules,
 } from '../../scripts/verify-native-modules';
+import { describeDb } from '../helpers/native-db';
 
 const tempDirsToCleanUp: string[] = [];
 
@@ -46,7 +47,7 @@ afterEach(() => {
   }
 });
 
-describe('native-module smoke — better-sqlite3 + sqlite-vec', () => {
+describeDb('native-module smoke — better-sqlite3 + sqlite-vec', () => {
   it('opens a better-sqlite3 database and reports a SQLite version', () => {
     const dbPath = createTempDbPath();
     const db = new Database(dbPath);

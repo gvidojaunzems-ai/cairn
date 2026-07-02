@@ -16,6 +16,7 @@ import type Database from 'better-sqlite3';
 
 import * as initial from './0001-init.js';
 import * as jobsTable from './0002-jobs-table.js';
+import * as domainExtensions from './0003-domain-extensions.js';
 
 export interface Migration {
   /** Sequential integer version, matches `PRAGMA user_version` after apply. */
@@ -33,4 +34,9 @@ export interface Migration {
 export const MIGRATIONS: readonly Migration[] = [
   { version: initial.VERSION, description: initial.DESCRIPTION, up: initial.up },
   { version: jobsTable.VERSION, description: jobsTable.DESCRIPTION, up: jobsTable.up },
+  {
+    version: domainExtensions.VERSION,
+    description: domainExtensions.DESCRIPTION,
+    up: domainExtensions.up,
+  },
 ];

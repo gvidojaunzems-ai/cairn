@@ -9,10 +9,10 @@ the parity test at `tests/docs/service-api.test.ts` fails loud.
 
 The current transport contract version:
 
-- **`apiVersion` = `1.0.0`**
+- **`apiVersion` = `2.0.0`**
 
 Every `CoreServiceResult<T>` returned from the main process embeds this
-string. Bumping it is a breaking-change signal — see ADR 0003.
+string. Bumping it is a breaking-change signal — see ADR 0007.
 
 ## Operation namespaces
 
@@ -37,49 +37,53 @@ There are **sixteen (16)** namespaces exposed on `window.cairn.invoke`:
 
 ### Per-namespace operations
 
-- `system` — `getStatus`, `getApiVersion`
-- `setup` — `getState`, `complete`
-- `git` — `list`, `status`
-- `projects` — `list`, `create`, `remove`
-- `today` — `get`
-- `dailies` — `list`, `create`
-- `news` — `list`, `refresh`
-- `search` — `query`
-- `docs` — `list`, `get`
-- `meetings` — `list`, `create`
-- `reports` — `list`, `generate`
-- `pulse` — `get`
-- `support` — `submit`
-- `settings` — `get`, `set`
-- `ai` — `chat`, `embed`
+- `system` — `getStatus`, `getFlags`, `getPaths`, `openExternal`
+- `setup` — `getState`, `run`, `cancel`
+- `git` — `getSyncState`, `pull`, `push`, `listLocalRepos`, `addLocalRepo`
+- `projects` — `list`, `get`, `create`, `updateCharter`, `setStatus`, `archive`, `generateRetro`
+- `today` — `getDashboard`, `getContextResume`, `getStandupDraft`, `approveStandup`, `regenerateStandup`
+- `dailies` — `getPack`, `getWipRadar`, `listActionItems`, `setActionItem`, `nudgeUnpushed`
+- `news` — `listFeed`, `getItem`, `save`, `listKnowledge`
+- `search` — `query`, `askDocs`
+- `docs` — `tree`, `get`, `create`, `save`, `syncRepos`, `listDrafts`
+- `meetings` — `start`, `stop`, `getLive`, `getProposals`, `applyProposal`, `applyAll`, `get`
+- `reports` — `templates`, `generate`, `export`, `pushToRepo`
+- `pulse` — `get`, `generateWeeklyDigest`
+- `support` — `listApps`, `getApp`, `listTickets`, `triageTicket`, `resolveTicket`
+- `settings` — `get`, `set`, `testConnector`, `getBudget`
+- `ai` — `complete`, `estimate`, `listModels`, `getBudget`
 - `jobs` — `start`, `cancel`, `status`
 
-Every op returns a `CoreServiceResult<T>` (see ADR 0003). Only
-`system.getStatus`, `system.getApiVersion`, `jobs.start`, and
-`jobs.cancel` have real implementations at foundation time; every
-other op returns `{ ok:false, error:{code:'not_implemented'} }`.
+Every op returns a `CoreServiceResult<T>` (see ADR 0003). Long-running
+work returns a `jobId` immediately and emits `job.progress` / `job.done`
+events. The UI re-fetches state on domain events rather than receiving
+large payloads over IPC.
 
 ## Server → UI events
 
 There are exactly **ten (10)** event names emitted over the event bus
 (`webContents.send`):
 
-1. `job.progress`
-2. `job.done`
-3. `job.cancelled`
-4. `system.ready`
-5. `system.error`
-6. `settings.changed`
-7. `projects.changed`
-8. `sync.progress`
-9. `sync.done`
-10. `notification.emit`
+1. `sync.updated`
+2. `job.progress`
+3. `job.done`
+4. `signals.updated`
+5. `news.updated`
+6. `budget.updated`
+7. `meeting.partial`
+8. `meeting.proposals`
+9. `setup.progress`
+10. `toast`
 
 Payload shapes are declared in `src/shared/ipc/events.ts`
-(`JobProgressEvent`, `JobDoneEvent`, `JobCancelledEvent`,
-`SystemReadyEvent`, `SystemErrorEvent`, `SettingsChangedEvent`,
-`ProjectsChangedEvent`, `SyncProgressEvent`, `SyncDoneEvent`,
-`NotificationEmitEvent`).
+(`SyncUpdatedEvent`, `JobProgressEvent`, `JobDoneEvent`,
+`SignalsUpdatedEvent`, `NewsUpdatedEvent`, `BudgetUpdatedEvent`,
+`MeetingPartialEvent`, `MeetingProposalsEvent`, `SetupProgressEvent`,
+`ToastEvent`).
+
+Job cancellation is reported via `job.done` with
+`error.code = 'cancelled'` (the legacy `job.cancelled` event was removed
+in apiVersion 2.0.0).
 
 ## Renderer surface
 

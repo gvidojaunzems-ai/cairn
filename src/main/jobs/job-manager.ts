@@ -255,12 +255,6 @@ export function createJobManager(options: CreateJobManagerOptions): JobManager {
           });
         }
         eventBus.emitJobDone({ jobId: message.jobId, error: message.error });
-        if (isCancel) {
-          eventBus.emitJobCancelled({
-            jobId: message.jobId,
-            reason: message.error.message,
-          });
-        }
         jobs.delete(message.jobId);
         break;
       }

@@ -19,6 +19,8 @@
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit -p tsconfig.main.json && tsc --noEmit -p tsconfig.renderer.json",
     "seed": "tsx scripts/seed.ts",
+    "setup:env": "tsx scripts/setup-environment.ts",
+    "verify:native": "tsx scripts/verify-native-modules.ts",
     "postinstall": "electron-rebuild"
   },
   "dependencies": {

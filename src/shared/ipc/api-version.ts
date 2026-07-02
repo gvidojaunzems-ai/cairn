@@ -1,15 +1,9 @@
 /**
  * API version constant for the IPC transport contract.
  *
- * Business rules:
- *   - Every `CoreServiceResult<T>` returned from the main process embeds
- *     this string so the renderer can detect a mismatched core version
- *     (e.g. after an upgrade) before dispatching a stale operation.
- *   - Bumping this string is a breaking-change signal. Any bump must be
- *     documented in a new ADR under `docs/adr/` and accompanied by a
- *     migration story.
+ * v2.0.0 — Spec 03 full operation + event catalog (ADR 0007).
  */
-export const API_VERSION = '1.0.0' as const;
+export const API_VERSION = '2.0.0' as const;
 
 /** Type alias for compile-time consumers. */
 export type ApiVersion = typeof API_VERSION;

@@ -1,24 +1,37 @@
 // qa-spec: S11-adjacent — the on-disk local store opens under WAL mode,
 // runs migrations, and can round-trip a job row via the canonical db layer.
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import Database from 'better-sqlite3';
 
 import { DB_FILE_NAME } from '../../../src/main/db/schema';
+import { CODE_SCHEMA_VERSION } from '../../../src/main/db/schema';
 import { runMigrations } from '../../../src/main/db/migrations/runner';
 import { closeTestStore, openTestStore } from '../../helpers/test-db';
 import type { LocalStoreHandle } from '../../../src/main/db/store';
 
+function nativeDbAvailable(): boolean {
+  try {
+    const db = new Database(':memory:');
+    db.close();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const describeDb = nativeDbAvailable() ? describe : describe.skip;
+
 let dir: string;
 let store: LocalStoreHandle;
 
-beforeEach(() => {
-  ({ store, dir } = openTestStore('cairn-db-'));
-});
+describeDb('main/db/store — openStore (S11-adjacent)', () => {
+  beforeEach(() => {
+    ({ store, dir } = openTestStore('cairn-db-'));
+  });
 
-afterEach(() => {
-  closeTestStore(store, dir);
-});
-
-describe('main/db/store — openStore (S11-adjacent)', () => {
+  afterEach(() => {
+    closeTestStore(store, dir);
+  });
   it('opens the DB, runs migrations, exposes db + jobsDao + close', () => {
     expect(store.db).toBeDefined();
     expect(store.jobsDao).toBeDefined();
@@ -37,7 +50,7 @@ describe('main/db/store — openStore (S11-adjacent)', () => {
       .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='jobs'")
       .get() as { name: string } | undefined;
     expect(row?.name).toBe('jobs');
-    expect(Number(store.db.pragma('user_version', { simple: true }))).toBe(2);
+    expect(Number(store.db.pragma('user_version', { simple: true }))).toBe(CODE_SCHEMA_VERSION);
   });
 
   it('round-trips a job row via jobsDao.insert / getById', () => {

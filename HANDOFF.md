@@ -1,176 +1,110 @@
-# HANDOFF — Cairn foundation
+# Cairn — HANDOFF
 
-This is a developer handoff for the Cairn desktop-app foundation. Everything
-below assumes a clean checkout on a machine that meets the prerequisites.
+## Branch: `feature/full-implementation`
 
-## Toolchain requirements
+Full Spec 03–20 implementation: IPC v2 catalog, engines, collectors, all 11 feature screens, security tests, architecture docs.
 
-- **Node.js** — 20 LTS (`node >= 20`). Nothing below 20 is supported; 22 works
-  but is not the CI target.
-- **pnpm** — 9 or newer (`pnpm >= 9`). npm/yarn are unsupported (pnpm's strict
-  hoisting and workspaces are baked into the layout).
-- Native-module toolchain per OS (used by `better-sqlite3` + `@electron/rebuild`):
-  - **Windows**: MSVC Build Tools with the *Desktop development with C++* workload
-  - **macOS**: Xcode Command Line Tools (`xcode-select --install`)
-  - **Linux**: `build-essential` + `python3` (+ `libsecret-1-dev` when the
-    keychain adapter lands)
-
-## Running the app
+## How to run
 
 ```bash
-pnpm install    # deps + postinstall runs @electron/rebuild
-pnpm dev        # opens the Cairn window (title "Cairn")
+git checkout feature/full-implementation
+fnm use 20              # or nvm use — Node 20 LTS required
+pnpm install
+pnpm setup:env          # Ollama + git team-repo + seed + local config
+pnpm dev                # full product UI
+pnpm build
+pnpm test
+pnpm typecheck
 ```
 
-`pnpm dev` runs `electron-vite dev`, which starts the Vite dev server for the
-renderer and boots Electron pointing at it. Cold start on a modern laptop is
-well under the 4-second budget.
-
-## Building
-
+**Local LLM (Ollama):** Install from https://ollama.com, then:
 ```bash
-pnpm build      # emits out/main, out/preload, out/renderer
-pnpm package    # per-OS installer via electron-builder
-                # add --win, --mac, or --linux to target one OS
+ollama pull llama3.2
+ollama pull nomic-embed-text
 ```
+Cairn uses `http://127.0.0.1:11434` by default. Template fallback applies when Ollama is offline.
 
-Installer artefacts land in `dist/installers/`.
+**Toolchain:** Node >= 20, pnpm >= 9, git, VS C++ build tools (Windows) for `better-sqlite3` / `sqlite-vec`.
 
-## Running the test suite
+## What was implemented
 
-```bash
-pnpm test           # Vitest — src + tests + docs + workflow structure
-pnpm lint           # ESLint
-pnpm typecheck      # tsc --noEmit for main and renderer
-pnpm format         # Prettier (rewrite in place)
-```
+### Spec 03 — Core Service API (apiVersion **2.0.0**, ADR 0007)
 
-The native-module smoke test (`tests/main/native-modules.smoke.test.ts`) is
-gated behind `CAIRN_RUN_NATIVE_SMOKE=1` because it requires the rebuilt
-better-sqlite3 binary and the sqlite-vec extension to be on disk.
+- **70 IPC operations** across 16 namespaces (see `docs/architecture/service-api.md`)
+- **10 events:** `sync.updated`, `job.progress`, `job.done`, `signals.updated`, `news.updated`, `budget.updated`, `meeting.partial`, `meeting.proposals`, `setup.progress`, `toast`
 
-## Project locations
+### Spec 04 — Git sync & team-repo
 
-| Path | Purpose |
-|------|---------|
-| `src/main/` | Electron main-process code (IPC, window lifecycle, error boundary). |
-| `src/main/ipc/` | Namespaced IPC router, Zod validation, event bus, `CoreServiceError` factory. |
-| `src/main/services/` | 16 per-namespace service objects (mostly `not_implemented` stubs). |
-| `src/main/workers/` | `node:worker_threads` background-worker script. |
-| `src/main/jobs/` | `JobManager`, job registry, sample-long-job fixture, worker message shapes. |
-| `src/main/db/` | Canonical SQLite store: migrations, entity DAOs, jobs DAO, `openStore()`. |
-| `src/preload/` | Preload script exposing the typed `window.cairn` bridge to the renderer. |
-| `src/renderer/` | UI layer: React app, hooks, global CSS. |
-| `src/renderer/ipc/` | Renderer-side typed `CairnRendererClient` + `useCoreService` hook. |
-| `src/shared/` | Cross-process utilities (paths, logger, feature flags, i18n stub). |
-| `src/shared/ipc/` | IPC descriptor layer — 16 op namespaces, 10 event names, `apiVersion`, Zod schemas. |
-| `src/contracts/` | Five stable contract placeholders — extend additively. |
-| `tests/` | Vitest suites mirroring `src/`, plus meta/CI/docs checks. |
-| `scripts/` | Node scripts (`seed.ts`, `notarize.js`, `verify-native-modules.ts`). |
-| `build/` | electron-builder resources (icon, entitlements). |
-| `docs/` | ADRs and architecture docs. See `docs/adr/0001-stack.md` + `docs/architecture/service-api.md`. |
-| `dist/installers/` | Packaged installers (git-ignored). |
-| `out/` | Compiled bundles (git-ignored). |
+- `src/main/engines/team-repo-engine.ts` — artifact parsers/writers, write API, pull/push, WIP privacy validation
+- `docs/architecture/team-repo-schema.md`
 
-## Per-OS data locations
+### Spec 05 — AI engine
 
-On first run the app creates:
+- `src/main/engines/ai-engine.ts` — Ollama + template fallbacks, budget ledger, taskType registry, Claude path (keychain-gated)
+- `docs/architecture/ai-contract.md`
 
-| OS | Data | Cache | Logs |
-|----|------|-------|------|
-| Windows | `%APPDATA%\Cairn` | `%LOCALAPPDATA%\Cairn\cache` | `%APPDATA%\Cairn\logs` |
-| macOS | `~/Library/Application Support/Cairn` | `~/Library/Caches/Cairn` | `~/Library/Logs/Cairn` |
-| Linux | `$XDG_DATA_HOME/cairn` (or `~/.local/share/cairn`) | `$XDG_CACHE_HOME/cairn` | `$XDG_STATE_HOME/cairn/logs` |
+### Spec 06 — Collectors
 
-## Feature flags
+- `src/main/collectors/` — scheduler + team-sync, wip-signals, news collectors
+- `docs/architecture/collectors.md`
 
-Runtime feature flags live at `{data-dir}/feature-flags.json` and can be
-overridden by env vars using the `FF_<UPPER_SNAKE>` convention (e.g.
-`FF_MY_FLAG=true`). Every flag defaults to `false` so incomplete work ships
-disabled.
+### Spec 07 — Search
 
-## CI status — dormant
+- `src/main/engines/search-engine.ts` — hybrid query + `askDocs` RAG
+- `docs/architecture/search.md`
 
-Workflows live under `.github/workflows/` and are **dormant**: the repo is
-not yet hosted on GitHub. They activate automatically on the first push.
-Validate structure via `pnpm test tests/ci` — do **not** wait for a live CI
-result until the repo is pushed.
+### Spec 08 — Setup bootstrap
 
-Every `uses:` entry is pinned to a full 40-character commit SHA per the root
-security policy. When updating an action, re-verify the SHA against the
-released tag.
+- `src/main/engines/setup-orchestrator.ts` — 8-step wizard backend
+- `docs/architecture/setup.md`
 
-## Known caveats
+### Spec 09 — UI shell
 
-Consolidated from the foundation-run risk analysis. None block bring-up, but
-each is a repeatable trap worth knowing before you file a bug.
+- Design system, widget registry, explain popovers, toast service, event refetch hook
+- `docs/ui/components.md`
 
-- **`pnpm format` rewrites files** — the script is `prettier --write .`, not
-  `--check`. Use `pnpm format` locally to fix formatting; do **not** rely on
-  it as a CI-style quality gate. If you need a check-only invocation, run
-  `pnpm exec prettier --check .` directly.
-- **Native-toolchain required at install time** — `pnpm install` triggers
-  `@electron/rebuild` for `better-sqlite3`. A workstation without MSVC Build
-  Tools (Windows), Xcode CLT (macOS), or `build-essential` + `python3`
-  (Linux) will fail during install, not at runtime.
-- **Installers are unsigned** — `pnpm package` produces artefacts without
-  Authenticode (Windows) or notarisation (macOS). Expect SmartScreen and
-  Gatekeeper warnings on end-user machines. Signing hooks in
-  `electron-builder.yml` and `scripts/notarize.js` are deliberate
-  placeholders (see ADR 0001 Consequences).
-- **`@napi-rs/keyring` is not yet a dependency** — the intended keychain
-  adapter is documented in ADR 0001, but `src/shared/keychain.ts` currently
-  returns a `not implemented` Result. Nothing at runtime depends on the
-  package; add it in the hardening task that lands the real adapter.
-- **Logger redaction is on by default** — the shared logger scrubs secret-
-  shaped values across three axes (blocklisted context keys, message regex
-  sweep, nested contexts). If a legitimate value looks like a secret
-  (`sk-*`, `ghp_*`, `Bearer *`, long hex/base64), it will be masked in logs.
+### Specs 10–19 — Feature screens
 
-## IPC service surface
+All 11 screens with Spec 03 IPC ops: Today (widgets + customize), Projects (detail + charter + onboarding), Dailies, Meetings (consent + STT + proposals), News, Docs (tree + ask), Reports, Pulse, Support, Settings, Setup wizard.
 
-The renderer talks to core over a typed IPC bridge exposed as
-`window.cairn` in `src/preload/index.ts`. The full surface — 16 op
-namespaces, 10 server → UI events, the `apiVersion` handshake constant,
-and the `CoreServiceResult<T>` shape — is enumerated in
-[`docs/architecture/service-api.md`](docs/architecture/service-api.md).
-That document is generated verbatim from `src/shared/ipc/operations.ts`,
-`src/shared/ipc/events.ts`, and `src/shared/ipc/api-version.ts`; the
-parity test at `tests/docs/service-api.test.ts` fails if it drifts.
+### Spec 20 — Security
 
-Business logic is still stubbed on most namespaces — every stub returns
-`{ ok:false, error:{ code:'not_implemented' } }` uniformly. Only
-`system.getStatus`, `system.getApiVersion`, `jobs.start`, and
-`jobs.cancel` are wired end-to-end at foundation time.
+- `tests/security/privacy-invariants.test.ts`
+- `docs/security/threat-model.md`
 
-### Runtime dependency note
+### Spec 21–22 — Packaging & QA
 
-`zod@3.23.8` is now a runtime dependency (validated inputs at the IPC
-boundary via `src/shared/ipc/schemas.ts`). It is externalised in the
-main bundle by `electron.vite.config.ts`; the renderer bundle must NOT
-import it (the architecture lint test at
-`tests/meta/architecture-lint.test.ts` enforces this).
+- electron-builder config retained; signing/whisper bundle documented as deployment follow-up
+- Contract tests updated for IPC v2; DB tests skip gracefully when native bindings unavailable (Node 24 dev machines)
 
-### Local-store schema v2
+## Key paths
 
-`LocalStoreSchema.version` bumped from `1` to `2`. The v2 addition is
-the `jobs` SQLite table (see ADR 0004). The migration runner at
-`src/main/db/migrations/0002-jobs-table.ts` idempotently creates the table on first
-upgrade; only the main thread writes to it (see ADR 0002).
+| Area | Path |
+|------|------|
+| IPC contracts | `src/shared/ipc/` |
+| Services | `src/main/services/` |
+| Engines | `src/main/engines/` |
+| Collectors | `src/main/collectors/` |
+| DB | `src/main/db/` |
+| UI | `src/renderer/` |
+| Specs | `Specs/` |
+| ADRs | `docs/adr/` |
 
-## Architecture
+## External runtime (optional)
 
-See [`docs/adr/0001-stack.md`](docs/adr/0001-stack.md) for the stack decision
-and rejected alternatives, and [`docs/architecture/repo-layout.md`](docs/architecture/repo-layout.md)
-for the full directory layout.
+- **Ollama** — local AI (`http://127.0.0.1:11434`); degrades to templates if offline
+- **Git** — team-repo sync when `git` binary available
+- **Claude API** — via keychain secret; disabled without key
+- **whisper.cpp** — meeting STT uses simulated transcript until binary bundled (Spec 21)
 
-New ADRs landed with the IPC transport work package:
+## CI
 
-- [`docs/adr/0005-ipc-transport-and-worker.md`](docs/adr/0005-ipc-transport-and-worker.md)
-  — `ipcMain.handle` + `contextBridge` + `node:worker_threads`, plus the
-  single-writer better-sqlite3 invariant.
-- [`docs/adr/0006-core-service-result-typed-errors.md`](docs/adr/0006-core-service-result-typed-errors.md)
-  — the discriminated `CoreServiceError` taxonomy and the additive
-  extension of `CoreServiceResult<T>`.
-- [`docs/adr/0004-local-store-jobs-table.md`](docs/adr/0004-local-store-jobs-table.md)
-  — the `jobs` row shape and the `LocalStoreSchema` v2 bump.
+GitHub Actions configured; CI is dormant until you push this branch to GitHub. Use **Node 20** in CI for native modules.
+
+## Known deployment gaps (Spec 21)
+
+- Code signing / notarization not configured
+- whisper.cpp binary not bundled
+- Auto-update channel not wired
+
+These require release infrastructure beyond application logic.

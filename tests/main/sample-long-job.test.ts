@@ -16,6 +16,7 @@ vi.mock('electron', () => ({
 }));
 
 import { closeTestStore, openTestStore } from '../helpers/test-db';
+import { describeDb } from '../helpers/native-db';
 import type { LocalStoreHandle } from '../../src/main/db/store';
 import { createEventBus } from '../../src/main/ipc/event-bus';
 import type { WebContentsLike } from '../../src/main/ipc/event-bus';
@@ -139,21 +140,21 @@ let store: LocalStoreHandle;
 let manager: JobManager | null;
 let events: EmittedEvent[];
 
-beforeEach(() => {
-  ({ store, dir } = openTestStore('cairn-sample-long-'));
-  events = [];
-  manager = null;
-});
+describeDb('sample long job — happy path (S2)', () => {
+  beforeEach(() => {
+    ({ store, dir } = openTestStore('cairn-sample-long-'));
+    events = [];
+    manager = null;
+  });
 
-afterEach(async () => {
-  if (manager !== null) {
-    await manager.terminate();
-  }
-  closeTestStore(store, dir);
-  manager = null;
-});
+  afterEach(async () => {
+    if (manager !== null) {
+      await manager.terminate();
+    }
+    closeTestStore(store, dir);
+    manager = null;
+  });
 
-describe('sample long job — happy path (S2)', () => {
   // qa-spec: S2
   it('emits at least one job.progress before a terminal job.done', async () => {
     const bus = createEventBus({ getWebContents: () => [makeFakeContents(events)] });

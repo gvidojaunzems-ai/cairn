@@ -1,15 +1,10 @@
 /**
  * `jobs.*` service — background job control plane.
- *
- * Business rules:
- *   - This is the ONLY namespace whose operations have real semantics
- *     alongside `system.*` — it drives the worker-thread job manager.
- *   - When no `JobManager` is provided (e.g. during a lightweight unit
- *     test) every op returns `not_implemented` gracefully.
  */
 import type { CoreServiceResult } from '../../contracts/core-service.contract.js';
 import type { JobHandle, JobIdInput, StartJobInput } from '../../shared/ipc/operations.js';
 import { errResult, makeError, notImplementedResult, okResult } from '../ipc/errors.js';
+import type { JobsDao } from '../db/dao/jobs.js';
 
 /** Minimal contract expected of the injected `JobManager`. */
 export interface JobManagerLike {
@@ -20,15 +15,19 @@ export interface JobManagerLike {
 export interface JobsService {
   start(input: StartJobInput): CoreServiceResult<JobHandle>;
   cancel(input: JobIdInput): CoreServiceResult<Record<string, never>>;
-  status(input: JobIdInput): CoreServiceResult<never>;
+  status(input: JobIdInput): CoreServiceResult<{
+    jobId: string;
+    kind: string;
+    status: string;
+    progressPct: number;
+    label: string | null;
+  }>;
 }
 
-/**
- * Build a jobs service backed by `manager`. When `manager` is undefined,
- * every op returns `not_implemented` so callers can wire this early in
- * bootstrap before the worker is ready.
- */
-export function createJobsService(manager?: JobManagerLike): JobsService {
+export function createJobsService(
+  manager?: JobManagerLike,
+  jobsDao?: JobsDao,
+): JobsService {
   return {
     start: (input) => {
       if (!manager) {
@@ -39,10 +38,7 @@ export function createJobsService(manager?: JobManagerLike): JobsService {
         return okResult(handle);
       } catch (err) {
         return errResult(
-          makeError(
-            'internal',
-            err instanceof Error ? err.message : 'Failed to start job',
-          ),
+          makeError('internal', err instanceof Error ? err.message : 'Failed to start job'),
         );
       }
     },
@@ -55,14 +51,26 @@ export function createJobsService(manager?: JobManagerLike): JobsService {
         return okResult({});
       } catch (err) {
         return errResult(
-          makeError(
-            'internal',
-            err instanceof Error ? err.message : 'Failed to cancel job',
-          ),
+          makeError('internal', err instanceof Error ? err.message : 'Failed to cancel job'),
         );
       }
     },
-    status: (_input) => notImplementedResult('jobs.status'),
+    status: (input) => {
+      if (!jobsDao) {
+        return notImplementedResult('jobs.status');
+      }
+      const job = jobsDao.getById(input.jobId);
+      if (job === undefined) {
+        return errResult(makeError('not_found', `Job not found: ${input.jobId}`));
+      }
+      return okResult({
+        jobId: job.id,
+        kind: job.kind,
+        status: job.status,
+        progressPct: job.progressPct ?? 0,
+        label: job.label ?? null,
+      });
+    },
   };
 }
 

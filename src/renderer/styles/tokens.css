@@ -1,0 +1,53 @@
+/* Cairn design tokens — dark teal theme (Spec 09, prototype-aligned) */
+:root {
+  color-scheme: dark;
+  --color-background: #0b1218;
+  --color-background-subtle: #0f181f;
+  --color-surface: #152028;
+  --color-surface-elevated: #1c2a35;
+  --color-surface-hover: #243442;
+  --color-border: #2a3d4d;
+  --color-border-subtle: #1f2f3c;
+  --color-text: #e4edf5;
+  --color-text-muted: #8fa3b8;
+  --color-text-faint: #5c7288;
+  --color-accent: #2dd4bf;
+  --color-accent-hover: #5eead4;
+  --color-accent-muted: #14b8a6;
+  --color-accent-subtle: rgba(45, 212, 191, 0.12);
+  --color-focus-ring: #38bdf8;
+  --color-success: #34d399;
+  --color-success-subtle: rgba(52, 211, 153, 0.15);
+  --color-warning: #fbbf24;
+  --color-warning-subtle: rgba(251, 191, 36, 0.15);
+  --color-danger: #f87171;
+  --color-danger-subtle: rgba(248, 113, 113, 0.15);
+  --color-info: #60a5fa;
+  --color-info-subtle: rgba(96, 165, 250, 0.15);
+  --color-claude: #d4a574;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-full: 999px;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --font-sans: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Cascadia Code', ui-monospace, monospace;
+  --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.4);
+  --shadow-popover: 0 8px 32px rgba(0, 0, 0, 0.55);
+  --sidebar-width: 220px;
+  --topbar-height: 48px;
+  --transition-fast: 120ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

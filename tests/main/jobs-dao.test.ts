@@ -1,22 +1,23 @@
 // qa-spec: S11-adjacent — JobsDao lifecycle: insert → updateStatus →
 // updateProgress → getById → listPending → cancelById.
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, expect, it } from 'vitest';
 
+import { describeDb } from '../helpers/native-db';
 import { openTestStore, closeTestStore } from '../helpers/test-db';
 import type { LocalStoreHandle } from '../../src/main/db/store';
 
 let dir: string;
 let store: LocalStoreHandle;
 
-beforeEach(() => {
-  ({ store, dir } = openTestStore('cairn-jobsdao-'));
-});
+describeDb('JobsDao', () => {
+  beforeEach(() => {
+    ({ store, dir } = openTestStore('cairn-jobsdao-'));
+  });
 
-afterEach(() => {
-  closeTestStore(store, dir);
-});
+  afterEach(() => {
+    closeTestStore(store, dir);
+  });
 
-describe('JobsDao — insert / getById (S11-adjacent)', () => {
   it('insert then getById round-trips id, kind, status', () => {
     store.jobsDao.insert({ id: 'j-1', kind: 'sample-long-job', status: 'pending' });
     const row = store.jobsDao.getById('j-1');
@@ -28,9 +29,7 @@ describe('JobsDao — insert / getById (S11-adjacent)', () => {
   it('getById returns undefined for a missing id', () => {
     expect(store.jobsDao.getById('does-not-exist')).toBeUndefined();
   });
-});
 
-describe('JobsDao — updateStatus / updateProgress lifecycle', () => {
   it('updateStatus transitions pending → running → succeeded', () => {
     store.jobsDao.insert({ id: 'j-2', kind: 'sample-long-job', status: 'pending' });
     store.jobsDao.updateStatus({ id: 'j-2', status: 'running' });
@@ -56,9 +55,7 @@ describe('JobsDao — updateStatus / updateProgress lifecycle', () => {
     const second = store.jobsDao.getById('j-4')?.updatedAt ?? 0;
     expect(second).toBeGreaterThanOrEqual(first);
   });
-});
 
-describe('JobsDao — listPending / cancelById', () => {
   it('listPending returns only pending jobs, ordered by updatedAt', () => {
     store.jobsDao.insert({ id: 'j-a', kind: 'sample-long-job', status: 'pending' });
     store.jobsDao.insert({ id: 'j-b', kind: 'sample-long-job', status: 'running' });

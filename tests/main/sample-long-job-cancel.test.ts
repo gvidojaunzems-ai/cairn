@@ -14,6 +14,7 @@ vi.mock('electron', () => ({
 }));
 
 import { closeTestStore, openTestStore } from '../helpers/test-db';
+import { describeDb } from '../helpers/native-db';
 import type { LocalStoreHandle } from '../../src/main/db/store';
 import { createEventBus } from '../../src/main/ipc/event-bus';
 import type { WebContentsLike } from '../../src/main/ipc/event-bus';
@@ -128,21 +129,21 @@ let store: LocalStoreHandle;
 let manager: JobManager | null;
 let events: EmittedEvent[];
 
-beforeEach(() => {
-  ({ store, dir } = openTestStore('cairn-sample-cancel-'));
-  events = [];
-  manager = null;
-});
+describeDb('sample long job — cancellation (S3)', () => {
+  beforeEach(() => {
+    ({ store, dir } = openTestStore('cairn-sample-cancel-'));
+    events = [];
+    manager = null;
+  });
 
-afterEach(async () => {
-  if (manager !== null) {
-    await manager.terminate();
-  }
-  closeTestStore(store, dir);
-  manager = null;
-});
+  afterEach(async () => {
+    if (manager !== null) {
+      await manager.terminate();
+    }
+    closeTestStore(store, dir);
+    manager = null;
+  });
 
-describe('sample long job — cancellation (S3)', () => {
   // qa-spec: S3
   it('cancellation surfaces as job.done with error.code = "cancelled"', async () => {
     const bus = createEventBus({ getWebContents: () => [makeFakeContents(events)] });

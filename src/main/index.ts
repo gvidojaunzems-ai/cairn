@@ -34,6 +34,7 @@ import { loadLocalConfig } from './config/local-config.js';
 import { loadTeamConfig } from './config/team-config.js';
 import { createDirectories, databaseFile, resolvePaths } from '../shared/paths.js';
 import { createLogger } from '../shared/logger.js';
+import { startCollectorsScheduler } from './collectors/scheduler.js';
 import { registerIpcHandlers } from './ipc/register-handlers.js';
 import { createEventBus, type EventBus } from './ipc/event-bus.js';
 import { openStore, type LocalStoreHandle } from './db/store.js';
@@ -232,7 +233,7 @@ const lazyJobManager: JobManagerLike = {
 
 function registerIpcChannels(): void {
   registerRestartChannel();
-  registerIpcHandlers({ jobManager: lazyJobManager });
+  registerIpcHandlers({ jobManager: lazyJobManager, eventBus: getEventBus() });
 }
 
 /**
@@ -261,7 +262,19 @@ export async function bootstrap(): Promise<void> {
   loadTeamConfig();
 
   registerIpcChannels();
+  startCollectorsOnBootstrap();
   createMainWindow();
+}
+
+function startCollectorsOnBootstrap(): void {
+  try {
+    const store = openStore();
+    startCollectorsScheduler(store, getEventBus());
+  } catch (err) {
+    logger.warn('collectors scheduler failed to start', {
+      errorMessage: err instanceof Error ? err.message : String(err),
+    });
+  }
 }
 
 // In a packaged app or dev-server run, `app.whenReady()` drives bootstrap.

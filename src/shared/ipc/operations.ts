@@ -1,43 +1,11 @@
 /**
- * IPC operation descriptors — the closed set of namespaces and per-namespace
- * operations exposed by the core service to the renderer.
- *
- * Business rules:
- *   - Exactly sixteen (16) namespaces are exposed. Adding a seventeenth
- *     requires a new ADR — every consumer must be extended in the same
- *     change.
- *   - Every operation declares typed request and response shapes via the
- *     generic `IpcOperation<Req, Res>` marker; the real value at runtime is
- *     an empty object — types are erased.
- *   - Zod runtime schemas for input validation live under
- *     `src/shared/ipc/schemas.ts`, keyed by `${namespace}.${op}`.
- *   - Business logic is out of scope for this transport layer; stubs
- *     uniformly return `not_implemented` (see `src/main/services/**`).
- */
-
-/**
- * Marker type binding a request and response shape to an operation name.
- * The runtime value is an empty object; the phantom type parameters exist
- * only so `typeof OP_NAMESPACES.system.getStatus` can be used to derive
- * `Req` / `Res` at compile time.
+ * IPC operation descriptors — Spec 03 canonical catalog (ADR 0007).
  */
 export interface IpcOperation<_Req, _Res> {
   readonly __req?: _Req;
   readonly __res?: _Res;
 }
 
-// ---------------------------------------------------------------------------
-// Namespace name tuple
-// ---------------------------------------------------------------------------
-
-/**
- * Every legal namespace name. Sixteen entries. `readonly [...] as const`
- * preserves the literal tuple type so consumers can derive
- * `NamespaceName` from `typeof OP_NAMESPACE_NAMES[number]`.
- *
- * The sixteenth namespace — `jobs` — carries the background-job control
- * plane (start, cancel, status) referenced by every long-running op.
- */
 export const OP_NAMESPACE_NAMES = [
   'system',
   'setup',
@@ -57,18 +25,9 @@ export const OP_NAMESPACE_NAMES = [
   'jobs',
 ] as const;
 
-/** Union of every legal namespace name. */
 export type NamespaceName = (typeof OP_NAMESPACE_NAMES)[number];
 
-// ---------------------------------------------------------------------------
-// Shared payload primitives
-// ---------------------------------------------------------------------------
-
 export interface EmptyInput {
-  /* intentionally empty */
-}
-
-export interface EmptyOutput {
   /* intentionally empty */
 }
 
@@ -85,97 +44,128 @@ export interface JobIdInput {
 }
 
 export interface StartJobInput {
-  /** Registered job kind (e.g. `sample-long-job`). */
   kind: string;
-  /** Optional structured input passed to the job runner. */
   input?: unknown;
 }
 
-// ---------------------------------------------------------------------------
-// Per-namespace op descriptor maps
-// ---------------------------------------------------------------------------
-
 export interface SystemOps {
   getStatus: IpcOperation<EmptyInput, SystemStatus>;
-  getApiVersion: IpcOperation<EmptyInput, { apiVersion: string }>;
+  getFlags: IpcOperation<EmptyInput, { flags: Record<string, boolean> }>;
+  getPaths: IpcOperation<EmptyInput, { data: string; teamRepo: string; logs: string }>;
+  openExternal: IpcOperation<{ url: string }, { opened: boolean }>;
 }
 
 export interface SetupOps {
-  getState: IpcOperation<EmptyInput, EmptyOutput>;
-  complete: IpcOperation<EmptyInput, EmptyOutput>;
+  getState: IpcOperation<EmptyInput, unknown>;
+  run: IpcOperation<{ step?: string }, { jobId: string }>;
+  cancel: IpcOperation<EmptyInput, { cancelled: boolean }>;
 }
 
 export interface GitOps {
-  list: IpcOperation<EmptyInput, EmptyOutput>;
-  status: IpcOperation<{ repoId: string }, EmptyOutput>;
+  getSyncState: IpcOperation<EmptyInput, unknown>;
+  pull: IpcOperation<EmptyInput, unknown>;
+  push: IpcOperation<EmptyInput, unknown>;
+  listLocalRepos: IpcOperation<EmptyInput, unknown>;
+  addLocalRepo: IpcOperation<{ path: string }, unknown>;
 }
 
 export interface ProjectsOps {
-  list: IpcOperation<EmptyInput, EmptyOutput>;
-  create: IpcOperation<{ name: string }, EmptyOutput>;
-  remove: IpcOperation<{ projectId: string }, EmptyOutput>;
+  list: IpcOperation<EmptyInput, unknown>;
+  get: IpcOperation<{ projectId: string }, unknown>;
+  create: IpcOperation<{ name: string; description?: string }, unknown>;
+  updateCharter: IpcOperation<{ projectId: string; charter: unknown }, unknown>;
+  setStatus: IpcOperation<{ projectId: string; status: string }, unknown>;
+  archive: IpcOperation<{ projectId: string }, unknown>;
+  generateRetro: IpcOperation<{ projectId: string }, unknown>;
 }
 
 export interface TodayOps {
-  get: IpcOperation<EmptyInput, EmptyOutput>;
+  getDashboard: IpcOperation<EmptyInput, unknown>;
+  getContextResume: IpcOperation<EmptyInput, unknown>;
+  getStandupDraft: IpcOperation<EmptyInput, unknown>;
+  approveStandup: IpcOperation<EmptyInput, unknown>;
+  regenerateStandup: IpcOperation<EmptyInput, unknown>;
 }
 
 export interface DailiesOps {
-  list: IpcOperation<EmptyInput, EmptyOutput>;
-  create: IpcOperation<{ date: string }, EmptyOutput>;
+  getPack: IpcOperation<{ date?: string }, unknown>;
+  getWipRadar: IpcOperation<EmptyInput, unknown>;
+  listActionItems: IpcOperation<EmptyInput, unknown>;
+  setActionItem: IpcOperation<{ id: string; status: string }, unknown>;
+  nudgeUnpushed: IpcOperation<{ personId: string }, unknown>;
 }
 
 export interface NewsOps {
-  list: IpcOperation<EmptyInput, EmptyOutput>;
-  refresh: IpcOperation<EmptyInput, EmptyOutput>;
+  listFeed: IpcOperation<{ topic?: string; source?: string }, unknown>;
+  getItem: IpcOperation<{ itemId: string }, unknown>;
+  save: IpcOperation<{ itemId: string }, unknown>;
+  listKnowledge: IpcOperation<EmptyInput, unknown>;
 }
 
 export interface SearchOps {
-  query: IpcOperation<{ q: string }, EmptyOutput>;
+  query: IpcOperation<{ q: string; limit?: number }, unknown>;
+  askDocs: IpcOperation<{ q: string; docIds?: string[] }, unknown>;
 }
 
 export interface DocsOps {
-  list: IpcOperation<EmptyInput, EmptyOutput>;
-  get: IpcOperation<{ docId: string }, EmptyOutput>;
+  tree: IpcOperation<EmptyInput, unknown>;
+  get: IpcOperation<{ docId: string }, unknown>;
+  create: IpcOperation<{ title: string; group: string; body?: string }, unknown>;
+  save: IpcOperation<{ docId: string; body: string; title?: string }, unknown>;
+  syncRepos: IpcOperation<EmptyInput, { jobId: string }>;
+  listDrafts: IpcOperation<EmptyInput, unknown>;
 }
 
 export interface MeetingsOps {
-  list: IpcOperation<EmptyInput, EmptyOutput>;
-  create: IpcOperation<{ title: string }, EmptyOutput>;
+  start: IpcOperation<{ title: string; consent: boolean }, unknown>;
+  stop: IpcOperation<EmptyInput, unknown>;
+  getLive: IpcOperation<EmptyInput, unknown>;
+  getProposals: IpcOperation<{ meetingId: string }, unknown>;
+  applyProposal: IpcOperation<{ meetingId: string; proposalId: string }, unknown>;
+  applyAll: IpcOperation<{ meetingId: string }, unknown>;
+  get: IpcOperation<{ meetingId: string }, unknown>;
 }
 
 export interface ReportsOps {
-  list: IpcOperation<EmptyInput, EmptyOutput>;
-  generate: IpcOperation<{ kind: string }, EmptyOutput>;
+  templates: IpcOperation<EmptyInput, unknown>;
+  generate: IpcOperation<{ kind: string; external?: boolean }, unknown>;
+  export: IpcOperation<{ reportId: string; format: 'md' | 'docx' | 'pdf' }, unknown>;
+  pushToRepo: IpcOperation<{ reportId: string }, unknown>;
 }
 
 export interface PulseOps {
-  get: IpcOperation<EmptyInput, EmptyOutput>;
+  get: IpcOperation<EmptyInput, unknown>;
+  generateWeeklyDigest: IpcOperation<EmptyInput, { jobId: string }>;
 }
 
 export interface SupportOps {
-  submit: IpcOperation<{ message: string }, EmptyOutput>;
+  listApps: IpcOperation<EmptyInput, unknown>;
+  getApp: IpcOperation<{ appId: string }, unknown>;
+  listTickets: IpcOperation<{ status?: string }, unknown>;
+  triageTicket: IpcOperation<{ ticketId: string; assigneeId?: string }, unknown>;
+  resolveTicket: IpcOperation<{ ticketId: string; resolution: string }, unknown>;
 }
 
 export interface SettingsOps {
-  get: IpcOperation<EmptyInput, EmptyOutput>;
-  set: IpcOperation<{ key: string; value: unknown }, EmptyOutput>;
+  get: IpcOperation<EmptyInput, unknown>;
+  set: IpcOperation<{ key: string; value: unknown }, unknown>;
+  testConnector: IpcOperation<{ connector: string }, unknown>;
+  getBudget: IpcOperation<EmptyInput, unknown>;
 }
 
 export interface AiOps {
-  chat: IpcOperation<{ prompt: string }, EmptyOutput>;
-  embed: IpcOperation<{ text: string }, EmptyOutput>;
+  complete: IpcOperation<{ taskType: string; inputs: unknown; qualityTier?: string; external?: boolean }, unknown>;
+  estimate: IpcOperation<{ taskType: string; inputs: unknown }, unknown>;
+  listModels: IpcOperation<EmptyInput, unknown>;
+  getBudget: IpcOperation<EmptyInput, unknown>;
 }
 
 export interface JobsOps {
   start: IpcOperation<StartJobInput, JobHandle>;
-  cancel: IpcOperation<JobIdInput, EmptyOutput>;
-  status: IpcOperation<JobIdInput, EmptyOutput>;
+  cancel: IpcOperation<JobIdInput, EmptyInput>;
+  status: IpcOperation<JobIdInput, unknown>;
 }
 
-/**
- * Union of every op-map interface. Used internally by `OpsFor<N>`.
- */
 export interface Namespaces {
   system: SystemOps;
   setup: SetupOps;
@@ -195,55 +185,32 @@ export interface Namespaces {
   jobs: JobsOps;
 }
 
-/** Resolve the op-map interface for a specific namespace name. */
 export type OpsFor<N extends NamespaceName> = Namespaces[N];
-
-/** Union of every legal op name for a specific namespace. */
 export type OpName<N extends NamespaceName> = keyof OpsFor<N> & string;
 
-// ---------------------------------------------------------------------------
-// Runtime descriptor: names only (types erased)
-// ---------------------------------------------------------------------------
-
-/**
- * Runtime descriptor mapping each namespace name to the list of its op
- * names. Consumers (the router, the doc generator, the contract tests)
- * iterate this to enumerate every registered handler.
- *
- * Keep in perfect sync with the per-namespace `*Ops` interfaces above —
- * the contract tests assert parity.
- */
 export const OP_NAMESPACES: {
   readonly [N in NamespaceName]: readonly (keyof Namespaces[N] & string)[];
 } = {
-  system: ['getStatus', 'getApiVersion'],
-  setup: ['getState', 'complete'],
-  git: ['list', 'status'],
-  projects: ['list', 'create', 'remove'],
-  today: ['get'],
-  dailies: ['list', 'create'],
-  news: ['list', 'refresh'],
-  search: ['query'],
-  docs: ['list', 'get'],
-  meetings: ['list', 'create'],
-  reports: ['list', 'generate'],
-  pulse: ['get'],
-  support: ['submit'],
-  settings: ['get', 'set'],
-  ai: ['chat', 'embed'],
+  system: ['getStatus', 'getFlags', 'getPaths', 'openExternal'],
+  setup: ['getState', 'run', 'cancel'],
+  git: ['getSyncState', 'pull', 'push', 'listLocalRepos', 'addLocalRepo'],
+  projects: ['list', 'get', 'create', 'updateCharter', 'setStatus', 'archive', 'generateRetro'],
+  today: ['getDashboard', 'getContextResume', 'getStandupDraft', 'approveStandup', 'regenerateStandup'],
+  dailies: ['getPack', 'getWipRadar', 'listActionItems', 'setActionItem', 'nudgeUnpushed'],
+  news: ['listFeed', 'getItem', 'save', 'listKnowledge'],
+  search: ['query', 'askDocs'],
+  docs: ['tree', 'get', 'create', 'save', 'syncRepos', 'listDrafts'],
+  meetings: ['start', 'stop', 'getLive', 'getProposals', 'applyProposal', 'applyAll', 'get'],
+  reports: ['templates', 'generate', 'export', 'pushToRepo'],
+  pulse: ['get', 'generateWeeklyDigest'],
+  support: ['listApps', 'getApp', 'listTickets', 'triageTicket', 'resolveTicket'],
+  settings: ['get', 'set', 'testConnector', 'getBudget'],
+  ai: ['complete', 'estimate', 'listModels', 'getBudget'],
   jobs: ['start', 'cancel', 'status'],
 };
 
-/**
- * Fully qualified operation id (`namespace.op`). Used as the IPC channel
- * name and as the key into the Zod schema registry.
- */
 export type QualifiedOpId = `${NamespaceName}.${string}`;
 
-/** Build a qualified op id from its parts. */
-export function qualifyOp<N extends NamespaceName>(
-  namespace: N,
-  op: OpName<N>,
-): QualifiedOpId {
+export function qualifyOp<N extends NamespaceName>(namespace: N, op: OpName<N>): QualifiedOpId {
   return `${namespace}.${op}` as QualifiedOpId;
 }

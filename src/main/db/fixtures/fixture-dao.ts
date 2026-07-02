@@ -14,12 +14,21 @@ import type { Project } from '../../../contracts/domain-model.contract.js';
 import type { Ticket } from '../../../contracts/domain-model.contract.js';
 import type { Vector } from '../../../contracts/domain-model.contract.js';
 import type { WipSignal } from '../../../contracts/domain-model.contract.js';
+import { createDirectories, databaseFile, resolvePaths } from '../../../shared/paths.js';
 import { loadSqliteVec } from '../connection.js';
 import { createVectorsDao } from '../dao/vectors.js';
 import { runMigrations } from '../migrations/runner.js';
 import { VECTOR_DIMENSION } from '../schema.js';
 
 import type { FixtureDao } from './fixture-runner.js';
+import { CHARTER_FIXTURES } from './charters.js';
+import { DOC_FIXTURES } from './docs.js';
+import { NEWS_ITEM_FIXTURES } from './news-items.js';
+import { PEOPLE_FIXTURES } from './people.js';
+import { PROJECT_FIXTURES } from './projects.js';
+import { TICKET_FIXTURES } from './tickets.js';
+import { VECTOR_FIXTURES } from './vectors.js';
+import { WIP_SIGNAL_FIXTURES } from './wip-signals.js';
 
 type DbProjectStatus = 'active' | 'paused' | 'completed' | 'archived';
 type DbTicketStatus = 'open' | 'in_progress' | 'blocked' | 'done' | 'closed';
@@ -242,14 +251,31 @@ const INSERT_HANDLERS: Record<string, (db: Database.Database, rows: readonly unk
 };
 
 /**
- * Open an in-memory cairn.db, apply migrations, and return a FixtureDao.
+ * Load all canonical fixtures into an already-open, migrated database.
+ * Returns the number of rows inserted (ignores conflicts).
  */
-export function createFixtureDao(): FixtureDao {
-  const db = new Database(':memory:');
-  db.pragma('foreign_keys = ON');
-  loadSqliteVec(db);
-  runMigrations(db, {});
+export function seedPersistedDatabase(db: Database.Database): number {
+  let total = 0;
+  const sets: { table: string; rows: readonly unknown[] }[] = [
+    { table: 'people', rows: PEOPLE_FIXTURES },
+    { table: 'projects', rows: PROJECT_FIXTURES },
+    { table: 'charters', rows: CHARTER_FIXTURES },
+    { table: 'docs', rows: DOC_FIXTURES },
+    { table: 'tickets', rows: TICKET_FIXTURES },
+    { table: 'wip_signals', rows: WIP_SIGNAL_FIXTURES },
+    { table: 'news_items', rows: NEWS_ITEM_FIXTURES },
+    { table: 'vectors', rows: VECTOR_FIXTURES },
+  ];
+  for (const set of sets) {
+    const handler = INSERT_HANDLERS[set.table];
+    if (handler !== undefined) {
+      total += handler(db, set.rows);
+    }
+  }
+  return total;
+}
 
+function buildFixtureDao(db: Database.Database): FixtureDao {
   return {
     insertBulk<T>(table: string, rows: readonly T[]): { inserted: number; skipped: number } {
       const handler = INSERT_HANDLERS[table];
@@ -260,4 +286,30 @@ export function createFixtureDao(): FixtureDao {
       return { inserted, skipped: rows.length - inserted };
     },
   };
+}
+
+/**
+ * Open an in-memory cairn.db, apply migrations, and return a FixtureDao.
+ */
+export function createFixtureDao(): FixtureDao {
+  const db = new Database(':memory:');
+  db.pragma('foreign_keys = ON');
+  loadSqliteVec(db);
+  runMigrations(db, {});
+  return buildFixtureDao(db);
+}
+
+/**
+ * Open the on-disk cairn.db under app data, apply migrations, and return a
+ * FixtureDao. Used by `pnpm seed` and `pnpm setup:env`.
+ */
+export function createPersistedFixtureDao(): FixtureDao {
+  const paths = resolvePaths();
+  createDirectories(paths);
+  const dbPath = databaseFile(paths);
+  const db = new Database(dbPath);
+  db.pragma('foreign_keys = ON');
+  loadSqliteVec(db);
+  runMigrations(db, { dbPath });
+  return buildFixtureDao(db);
 }

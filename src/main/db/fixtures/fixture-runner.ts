@@ -113,8 +113,13 @@ export class FixtureSeedRunner implements SeedRunner {
     try {
       const mod = (await import('./fixture-dao.js')) as {
         createFixtureDao?: () => FixtureDao;
+        createPersistedFixtureDao?: () => FixtureDao;
       };
-      const dao = mod.createFixtureDao?.();
+      const useMemory =
+        process.env.VITEST === 'true' || process.env.CAIRN_SEED_MEMORY === '1';
+      const dao = useMemory
+        ? mod.createFixtureDao?.()
+        : (mod.createPersistedFixtureDao?.() ?? mod.createFixtureDao?.());
       if (dao !== undefined) {
         return dao;
       }

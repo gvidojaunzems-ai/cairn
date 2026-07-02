@@ -16,6 +16,7 @@ vi.mock('electron', () => ({
   BrowserWindow: vi.fn(),
 }));
 
+import { describeDb } from '../helpers/native-db';
 import { closeTestStore, openTestStore } from '../helpers/test-db';
 import type { LocalStoreHandle } from '../../src/main/db/store';
 import { createEventBus } from '../../src/main/ipc/event-bus';
@@ -76,20 +77,20 @@ function makeFakeWorker(): {
   };
 }
 
-beforeEach(() => {
-  ({ store, dir } = openTestStore('cairn-job-mgr-'));
-  manager = null;
-});
+describeDb('JobManager — construction (S2/S3-adjacent)', () => {
+  beforeEach(() => {
+    ({ store, dir } = openTestStore('cairn-job-mgr-'));
+    manager = null;
+  });
 
-afterEach(async () => {
-  if (manager !== null) {
-    await manager.terminate();
-  }
-  closeTestStore(store, dir);
-  manager = null;
-});
+  afterEach(async () => {
+    if (manager !== null) {
+      await manager.terminate();
+    }
+    closeTestStore(store, dir);
+    manager = null;
+  });
 
-describe('JobManager — construction (S2/S3-adjacent)', () => {
   // qa-spec: S2/S3-adjacent
   it('createJobManager returns a manager with the documented surface', () => {
     const fake = makeFakeWorker();

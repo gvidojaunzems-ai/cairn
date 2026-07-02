@@ -1,9 +1,5 @@
 /**
  * DAO barrel export.
- *
- * Downstream consumers (service-API, seed runner) import DAO factories from
- * this module rather than reaching directly into individual files — that way
- * a rename or split within `dao/` stays a local refactor.
  */
 export {
   createKnowledgeItemsDao,
@@ -63,3 +59,17 @@ export {
   type UpdateJobStatusInput,
   type UpdateJobProgressInput,
 } from './jobs.js';
+export { createUpdatesDao, type Update, type UpdatesDao } from './updates.js';
+export { createDecisionsDao, type Decision, type DecisionStatus, type DecisionsDao } from './decisions.js';
+export { createAppsDao, type App, type AppsDao } from './apps.js';
+export {
+  createMeetingsDao,
+  type Meeting,
+  type ActionItem,
+  type ActionItemStatus,
+  type MeetingsDao,
+} from './meetings.js';
+export { createReportsDao, type Report, type ReportsDao } from './reports.js';
+export { createFeedsDao, type Feed, type FeedsDao } from './feeds.js';
+export { createLocalReposDao, type LocalRepo, type LocalReposDao } from './local-repos.js';
+export { createSettingsKvDao, type SettingsKvDao } from './settings-kv.js';
