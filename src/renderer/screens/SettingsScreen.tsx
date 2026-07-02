@@ -87,6 +87,7 @@ export function SettingsScreen(): ReactElement {
   const [qualityFallback, setQualityFallback] = useState(false);
 
   const [connectorStatus, setConnectorStatus] = useState<Record<string, string>>({});
+  const [diagPath, setDiagPath] = useState<string | null>(null);
 
 
 
@@ -180,7 +181,9 @@ export function SettingsScreen(): ReactElement {
 
         ...prev,
 
-        [connector]: result.ok ? t('settings.connectorOk', 'OK') : result.error.message,
+        [connector]: result.ok
+          ? (result.data as { message: string }).message
+          : result.error.message,
 
       }));
 
@@ -189,6 +192,13 @@ export function SettingsScreen(): ReactElement {
     [invoke],
 
   );
+
+  const exportDiagnostics = useCallback(async () => {
+    const result = await invoke('system', 'exportDiagnostics');
+    if (result.ok) {
+      setDiagPath((result.data as { path: string }).path);
+    }
+  }, [invoke]);
 
 
 
@@ -286,7 +296,7 @@ export function SettingsScreen(): ReactElement {
 
         <Card title={t('settings.connectors', 'Connectors')}>
 
-          {['github', 'slack', 'rss'].map((c) => (
+          {['github', 'slack', 'rss', 'ollama', 'git'].map((c) => (
 
             <div key={c} className="connector-row">
 
@@ -315,6 +325,22 @@ export function SettingsScreen(): ReactElement {
         <Card title={t('settings.feeds', 'News feeds')}>
 
           <p className="muted">{t('settings.feedsHint', 'Configure RSS feeds in team repo cairn.config.yaml')}</p>
+
+        </Card>
+
+
+
+        <Card title={t('settings.diagnostics', 'Diagnostics')}>
+
+          <p className="muted">{t('settings.diagnosticsHint', 'Export redacted logs and runtime info for support.')}</p>
+
+          <Button variant="sm" onClick={() => void exportDiagnostics()}>
+
+            {t('settings.exportDiagnostics', 'Export diagnostics')}
+
+          </Button>
+
+          {diagPath !== null && <p className="muted">{diagPath}</p>}
 
         </Card>
 
@@ -357,6 +383,11 @@ export function SetupScreen(): ReactElement {
   const [state, setState] = useState<{ complete: boolean; step: string; peopleCount: number } | null>(null);
 
   const [running, setRunning] = useState(false);
+  const [runtime, setRuntime] = useState<{
+    git?: { available: boolean; message: string };
+    ollama?: { available: boolean; message: string };
+    whisper?: { available: boolean; message: string };
+  } | null>(null);
 
 
 
@@ -367,6 +398,16 @@ export function SetupScreen(): ReactElement {
     if (result.ok) {
 
       setState(result.data as typeof state);
+
+    }
+
+    const status = await invoke('system', 'getStatus');
+
+    if (status.ok) {
+
+      const data = status.data as { runtime?: typeof runtime };
+
+      setRuntime(data.runtime ?? null);
 
     }
 
@@ -481,6 +522,32 @@ export function SetupScreen(): ReactElement {
               {state.peopleCount} {t('setup.people', 'people')} · {state.step}
 
             </p>
+
+          )}
+
+          {runtime !== null && (
+
+            <ul className="setup-runtime">
+
+              <li className={runtime.git?.available ? 'ok' : 'warn'}>
+
+                Git: {runtime.git?.message ?? 'unknown'}
+
+              </li>
+
+              <li className={runtime.ollama?.available ? 'ok' : 'warn'}>
+
+                Ollama: {runtime.ollama?.message ?? 'unknown'}
+
+              </li>
+
+              <li className={runtime.whisper?.available ? 'ok' : 'warn'}>
+
+                STT: {runtime.whisper?.message ?? 'unknown'}
+
+              </li>
+
+            </ul>
 
           )}
 

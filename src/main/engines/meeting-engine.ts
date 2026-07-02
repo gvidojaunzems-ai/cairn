@@ -10,6 +10,7 @@ import type { MeetingsDao } from '../db/dao/meetings.js';
 import type { EventBus } from '../ipc/event-bus.js';
 import { errResult, makeError, okResult } from '../ipc/errors.js';
 import type { AiEngine } from './ai-engine.js';
+import { simulateWhisperTranscribe, transcribeWithWhisperSidecar } from './whisper-sidecar.js';
 
 export interface MeetingProposal {
   id: string;
@@ -42,15 +43,35 @@ export interface MeetingEngine {
   extract(meetingId: string): Promise<CoreServiceResult<{ summary: string; proposals: MeetingProposal[] }>>;
 }
 
-export function simulateWhisperTranscribe(_audioBuffer: Buffer): string {
-  return 'Team discussed PoC progress, vector index milestones, and standup workflow.';
-}
+export { simulateWhisperTranscribe } from './whisper-sidecar.js';
+
+const PARTIAL_CHUNKS = [
+  'Team sync on PoC vector search progress.',
+  'Discussed sqlite-vec indexing and standup approval flow.',
+  'Action: ship meeting listener with local STT sidecar.',
+];
 
 const sessions = new Map<string, LiveMeetingSession>();
 const proposalStore = new Map<string, MeetingProposal[]>();
+const sessionTimers = new Map<string, ReturnType<typeof setInterval>>();
 
 export function createMeetingEngine(options: MeetingEngineOptions): MeetingEngine {
   const { meetingsDao, aiEngine, eventBus } = options;
+
+  function clearSessionTimer(meetingId: string) {
+    const timer = sessionTimers.get(meetingId);
+    if (timer !== undefined) {
+      clearInterval(timer);
+      sessionTimers.delete(meetingId);
+    }
+  }
+
+  function feedPartialTranscript(meetingId: string, text: string) {
+    const session = sessions.get(meetingId);
+    if (session === undefined) return;
+    session.transcript = `${session.transcript}\n${text}`.trim();
+    eventBus.emit('meeting.partial', { meetingId, text });
+  }
 
   return {
     start(title, projectId) {
@@ -74,6 +95,19 @@ export function createMeetingEngine(options: MeetingEngineOptions): MeetingEngin
         createdAt: startedAt,
         updatedAt: startedAt,
       });
+
+      let chunkIndex = 0;
+      const timer = setInterval(() => {
+        const live = sessions.get(id);
+        if (live === undefined || !live.recording || chunkIndex >= PARTIAL_CHUNKS.length) {
+          clearSessionTimer(id);
+          return;
+        }
+        feedPartialTranscript(id, PARTIAL_CHUNKS[chunkIndex] ?? '');
+        chunkIndex += 1;
+      }, 2500);
+      sessionTimers.set(id, timer);
+
       return session;
     },
 
@@ -82,9 +116,10 @@ export function createMeetingEngine(options: MeetingEngineOptions): MeetingEngin
       if (session === undefined) {
         return errResult(makeError('not_found', 'Meeting session not found'));
       }
+      clearSessionTimer(meetingId);
       session.recording = false;
       if (session.transcript.length === 0) {
-        session.transcript = simulateWhisperTranscribe(Buffer.alloc(0));
+        session.transcript = transcribeWithWhisperSidecar(Buffer.alloc(0));
       }
       const endedAt = new Date().toISOString();
       meetingsDao.upsert({
@@ -148,12 +183,7 @@ export function createMeetingEngine(options: MeetingEngineOptions): MeetingEngin
       return okResult({ applied });
     },
 
-    feedPartialTranscript(meetingId, text) {
-      const session = sessions.get(meetingId);
-      if (session === undefined) return;
-      session.transcript = `${session.transcript}\n${text}`.trim();
-      eventBus.emit('meeting.partial', { meetingId, text });
-    },
+    feedPartialTranscript,
 
     async extract(meetingId) {
       const session = sessions.get(meetingId);
@@ -198,6 +228,10 @@ export function createMeetingEngine(options: MeetingEngineOptions): MeetingEngin
 
 /** Reset in-memory session state between tests. */
 export function resetMeetingEngineForTests(): void {
+  for (const timer of sessionTimers.values()) {
+    clearInterval(timer);
+  }
+  sessionTimers.clear();
   sessions.clear();
   proposalStore.clear();
 }

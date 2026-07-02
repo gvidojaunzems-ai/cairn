@@ -1,7 +1,11 @@
 /**
  * `reports.*` service — report templates and generation.
  */
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import type { CoreServiceResult } from '../../contracts/core-service.contract.js';
+import { resolvePaths } from '../../shared/paths.js';
 import { errResult, makeError, okResult } from '../ipc/errors.js';
 import type { ServiceContext } from './service-context.js';
 
@@ -45,16 +49,28 @@ export function createReportsService(ctx: ServiceContext): ReportsService {
 
     export: (input) => {
       const row = ctx.store.db
-        .prepare('SELECT id, content FROM reports WHERE id = ?')
-        .get(input.reportId) as { id: string; content: string } | undefined;
-      if (row === undefined) {
+        .prepare('SELECT id, content, title FROM reports WHERE id = ?')
+        .get(input.reportId) as { id: string; content: string; title: string } | undefined;
+      let body = row?.content;
+      if (body === undefined) {
         const stored = ctx.settings.get(`${REPORT_BODY_PREFIX}${input.reportId}`);
-        if (stored === undefined) {
+        if (typeof stored !== 'string') {
           return errResult(makeError('not_found', `Report not found: ${input.reportId}`));
         }
+        body = stored;
       }
-      const path = `exports/${input.reportId}.${input.format}`;
-      return okResult({ path, format: input.format });
+      if (input.format !== 'md') {
+        return errResult(
+          makeError('not_implemented', `Export format '${input.format}' is not implemented — use md`),
+        );
+      }
+      const paths = resolvePaths();
+      const outDir = join(paths.data, 'exports');
+      mkdirSync(outDir, { recursive: true });
+      const fileName = `${input.reportId}.md`;
+      const outPath = join(outDir, fileName);
+      writeFileSync(outPath, body, 'utf8');
+      return okResult({ path: outPath, format: input.format });
     },
 
     pushToRepo: (input) => {

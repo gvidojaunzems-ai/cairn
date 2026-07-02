@@ -6,7 +6,7 @@
 // same code path the preload hits after IPC deserialisation. The 100 ms
 // budget covers everything from `dispatch(id, input)` entering the
 // router to a fully-formed `CoreServiceResult<T>` leaving it.
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { performance } from 'node:perf_hooks';
 
 vi.mock('electron', () => ({
@@ -18,9 +18,13 @@ vi.mock('electron', () => ({
 
 import { buildHandlerTable } from '../../src/main/ipc/register-handlers';
 import { createIpcRouter } from '../../src/main/ipc/router';
+import { probeRuntimeDeps } from '../../src/main/runtime/deps-probe.js';
 import { API_VERSION } from '../../src/shared/ipc/api-version';
 
 describe('system.getStatus — S1 round-trip perf', () => {
+  beforeAll(async () => {
+    await probeRuntimeDeps();
+  });
   // qa-spec: S1 — shape assertions
   it('returns ok:true with apiVersion === API_VERSION', async () => {
     const router = createIpcRouter({ handlers: buildHandlerTable() });

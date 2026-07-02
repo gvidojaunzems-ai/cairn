@@ -15,6 +15,7 @@ export const IPC_INPUT_SCHEMAS = {
   'system.getFlags': EMPTY_INPUT,
   'system.getPaths': EMPTY_INPUT,
   'system.openExternal': z.object({ url: z.string().url() }).strict(),
+  'system.exportDiagnostics': EMPTY_INPUT,
 
   'setup.getState': EMPTY_INPUT,
   'setup.run': z.object({ step: z.string().optional() }).strict(),

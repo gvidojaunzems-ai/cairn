@@ -31,6 +31,7 @@ const SAFE_INPUT: Record<QualifiedOpId, unknown> = {
   'system.getFlags': {},
   'system.getPaths': {},
   'system.openExternal': { url: 'https://example.com' },
+  'system.exportDiagnostics': {},
   'setup.getState': {},
   'setup.run': {},
   'setup.cancel': {},
@@ -154,7 +155,8 @@ describe('ipc-router — dispatch shape (S5)', () => {
     const result = await router.dispatch('system.getStatus', {});
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.data).toEqual({ ready: true });
+      expect(result.data).toMatchObject({ ready: true });
+      expect((result.data as { runtime?: unknown }).runtime).toBeDefined();
       expect(typeof result.apiVersion).toBe('string');
       expect(result.apiVersion.length).toBeGreaterThan(0);
     }

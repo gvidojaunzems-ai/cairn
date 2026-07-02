@@ -1,5 +1,5 @@
 /**
- * `system.*` service — status, flags, paths, and external URL opener.
+ * `system.*` service — status, flags, paths, diagnostics, and external URL opener.
  */
 import { shell } from 'electron';
 
@@ -8,16 +8,23 @@ import type { SystemStatus } from '../../shared/ipc/operations.js';
 import { getFlag, loadFlags } from '../../shared/feature-flags.js';
 import { resolvePaths, teamRepoDir } from '../../shared/paths.js';
 import { errResult, makeError, okResult } from '../ipc/errors.js';
+import { exportDiagnosticsBundle } from '../runtime/diagnostics-export.js';
+import { probeRuntimeDeps } from '../runtime/deps-probe.js';
 
 export interface SystemService {
-  getStatus(): CoreServiceResult<SystemStatus>;
+  getStatus(): Promise<CoreServiceResult<SystemStatus>>;
   getFlags(): CoreServiceResult<{ flags: Record<string, boolean> }>;
   getPaths(): CoreServiceResult<{ data: string; teamRepo: string; logs: string }>;
   openExternal(input: { url: string }): CoreServiceResult<{ opened: boolean }>;
+  exportDiagnostics(): Promise<CoreServiceResult<{ path: string; exportedAt: string }>>;
 }
 
 export const systemService: SystemService = {
-  getStatus: (): CoreServiceResult<SystemStatus> => okResult({ ready: true }),
+  getStatus: async (): Promise<CoreServiceResult<SystemStatus>> => {
+    const runtime = await probeRuntimeDeps();
+    const ready = runtime.git.available;
+    return okResult({ ready, runtime });
+  },
 
   getFlags: () => {
     const fileFlags = loadFlags();
@@ -44,6 +51,17 @@ export const systemService: SystemService = {
     } catch (err) {
       return errResult(
         makeError('internal', err instanceof Error ? err.message : 'Failed to open URL'),
+      );
+    }
+  },
+
+  exportDiagnostics: async () => {
+    try {
+      const result = await exportDiagnosticsBundle();
+      return okResult(result);
+    } catch (err) {
+      return errResult(
+        makeError('internal', err instanceof Error ? err.message : 'Diagnostics export failed'),
       );
     }
   },

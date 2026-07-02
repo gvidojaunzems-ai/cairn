@@ -31,8 +31,19 @@ export interface EmptyInput {
   /* intentionally empty */
 }
 
+export interface RuntimeDepStatus {
+  available: boolean;
+  message: string;
+  detail?: string;
+}
+
 export interface SystemStatus {
   ready: boolean;
+  runtime?: {
+    git: RuntimeDepStatus;
+    ollama: RuntimeDepStatus;
+    whisper: RuntimeDepStatus;
+  };
 }
 
 export interface JobHandle {
@@ -53,6 +64,7 @@ export interface SystemOps {
   getFlags: IpcOperation<EmptyInput, { flags: Record<string, boolean> }>;
   getPaths: IpcOperation<EmptyInput, { data: string; teamRepo: string; logs: string }>;
   openExternal: IpcOperation<{ url: string }, { opened: boolean }>;
+  exportDiagnostics: IpcOperation<EmptyInput, { path: string; exportedAt: string }>;
 }
 
 export interface SetupOps {
@@ -191,7 +203,7 @@ export type OpName<N extends NamespaceName> = keyof OpsFor<N> & string;
 export const OP_NAMESPACES: {
   readonly [N in NamespaceName]: readonly (keyof Namespaces[N] & string)[];
 } = {
-  system: ['getStatus', 'getFlags', 'getPaths', 'openExternal'],
+  system: ['getStatus', 'getFlags', 'getPaths', 'openExternal', 'exportDiagnostics'],
   setup: ['getState', 'run', 'cancel'],
   git: ['getSyncState', 'pull', 'push', 'listLocalRepos', 'addLocalRepo'],
   projects: ['list', 'get', 'create', 'updateCharter', 'setStatus', 'archive', 'generateRetro'],

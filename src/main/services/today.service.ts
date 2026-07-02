@@ -69,13 +69,10 @@ function buildDashboard(ctx: ServiceContext) {
         why: n.summary?.slice(0, 80) ?? 'Relevant to local-first AI tooling',
       })),
       checks: [
-        { name: 'CI / lint', status: 'pass' as const },
-        { name: 'poc-vector-search PR', status: 'queued' as const },
+        { name: 'Git sync', status: sync.status === 'synced' ? ('pass' as const) : ('queued' as const) },
+        { name: 'Local repos', status: repos.length > 0 ? ('pass' as const) : ('queued' as const) },
       ],
-      todos: [
-        { file: 'src/main/index.ts', line: 246, tag: 'TODO', text: 'Wire auto-seed on first run' },
-        { file: 'src/renderer/App.tsx', line: 1, tag: 'FIXME', text: 'Replace stub with shell' },
-      ],
+      todos: [],
     },
     stats: {
       activePocs: projects.length,

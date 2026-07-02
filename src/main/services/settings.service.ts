@@ -3,13 +3,14 @@
  */
 import type { CoreServiceResult } from '../../contracts/core-service.contract.js';
 import { okResult } from '../ipc/errors.js';
+import { testConnector as runConnectorTest } from '../connectors/test-connector.js';
 import { loadLocalConfig } from '../config/local-config.js';
 import type { ServiceContext } from './service-context.js';
 
 export interface SettingsService {
   get(): CoreServiceResult<{ local: Record<string, unknown>; kv: Record<string, unknown>; budget: { used: number; cap: number } }>;
   set(input: { key: string; value: unknown }): CoreServiceResult<{ key: string }>;
-  testConnector(_input: { connector: string }): CoreServiceResult<{ ok: boolean; message: string }>;
+  testConnector(input: { connector: string }): Promise<CoreServiceResult<{ ok: boolean; message: string }>>;
   getBudget(): CoreServiceResult<{ used: number; cap: number }>;
 }
 
@@ -27,8 +28,10 @@ export function createSettingsService(ctx: ServiceContext): SettingsService {
       ctx.eventBus.emit('toast', { level: 'info', message: `Setting updated: ${input.key}` });
       return okResult({ key: input.key });
     },
-    testConnector: (input) =>
-      okResult({ ok: true, message: `Connector ${input.connector} check passed (offline stub).` }),
+    testConnector: async (input) => {
+      const result = await runConnectorTest(input.connector);
+      return okResult(result);
+    },
     getBudget: () => {
       const budgetResult = ctx.aiEngine.getBudget();
       if (!budgetResult.ok) return budgetResult;
