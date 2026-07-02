@@ -25,27 +25,67 @@ Everything the user sees runs in the Chromium renderer.
 The Electron main process — window lifecycle, IPC handlers, platform
 integration.
 
-- `src/main/index.ts` — bootstrap. Registers the error boundary, creates
-  data/cache/logs directories, wires IPC channels, then constructs the
-  `BrowserWindow` with `contextIsolation: true` + `sandbox: true`.
+- `src/main/index.ts` — bootstrap. Runs the deterministic startup order:
+  register error boundary → create data/cache/logs directories → open
+  `cairn.db` + migrate → load local + team config → wire IPC → construct
+  the `BrowserWindow` with `contextIsolation: true` + `sandbox: true`.
 - `src/main/error-boundary.ts` — process-level `uncaughtException` and
   `unhandledRejection` handlers that funnel through the shared logger.
+- `src/main/config/local-config.ts` — per-machine `local.config.json`
+  loader under `resolvePaths().data`. Rejects unknown keys and drops any
+  key that matches the secret-blocklist (never persists a secret).
+- `src/main/config/team-config.ts` — team-repo config loader under
+  `resolvePaths().data/team-repo`.
+- `src/main/config/index.ts` — barrel export.
 - `src/preload/index.ts` — the ONLY IPC bridge. Exposes a typed
   `window.cairn` surface via `contextBridge.exposeInMainWorld`.
+
+## Embedded data layer
+
+`src/main/db/` — the canonical local store. Every downstream feature
+(service API, AI/search, git-sync, fixtures) reaches the DB through this
+barrel export.
+
+- `src/main/db/index.ts` — barrel: `openDatabase`, `runMigrations`,
+  `NewerSchemaVersionError`, the schema constants, and every DAO.
+- `src/main/db/connection.ts` — `openDatabase()` factory. Enables
+  `PRAGMA foreign_keys=ON`, loads `sqlite-vec` via
+  `getLoadablePath()`, and runs the migration runner as its final step.
+- `src/main/db/schema.ts` — schema-level constants (`CODE_SCHEMA_VERSION`,
+  `VECTOR_DIMENSION`, `VEC_ITEMS_TABLE`, `VECTOR_METADATA_TABLE`,
+  `DB_FILE_NAME`, `BACKUP_FILE_PREFIX`) and shared row shapes.
+- `src/main/db/migrations/` — forward-only migration runner and files.
+  - `runner.ts` — transactional, backup-first runner keyed on
+    `PRAGMA user_version`. Throws `NewerSchemaVersionError` when the DB
+    reports a schema newer than the code (see ADR 0003).
+  - `index.ts` — sequential migration registry.
+  - `0001-init.ts` — DDL for all 22 tables (20 entity tables +
+    `vector_metadata` + `vec_items` virtual table).
+- `src/main/db/dao/` — typed DAOs per entity (`knowledge-items`,
+  `people`, `projects`, `charters`, `news-items`, `docs`, `tickets`,
+  `wip-signals`, `vectors`, and the `index.ts` barrel).
+- `src/main/db/fixtures/` — fixture data + `FixtureSeedRunner`
+  populating a freshly-migrated DB via `pnpm seed`.
 
 ## Platform / data layer
 
 Cross-process utilities and the on-disk footprint.
 
 - `src/shared/paths.ts` — per-OS `AppPaths` resolver with XDG fallbacks;
-  idempotent `createDirectories`.
+  idempotent `createDirectories` (creates `index/`, `models/`,
+  `team-repo/`, `attachments/`, `backups/` under `data/`); helpers
+  `databaseFile`, `teamRepoDir`, `backupDir`.
 - `src/shared/logger.ts` — structured JSON logger, blocklist + regex secret
   redaction, bounded rotation (5 MB × 5 files).
 - `src/shared/feature-flags.ts` + `src/shared/feature-flags.schema.ts` —
   typed feature-flag config with `env > file > default(false)` precedence.
 - `src/shared/i18n.ts` — `t()` stub with a fallback-key registry.
-- `src/shared/keychain.ts` — Result-shape stub; real adapter is
-  `@napi-rs/keyring` per ADR 0001.
+- `src/shared/result.ts` — shared `Result<T> = { success: true; data } | { success: false; error }`
+  type used by the keychain adapter (and future modules).
+- `src/shared/keychain.ts` — `KeychainAdapter` with `getSecret` /
+  `setSecret` / `deleteSecret` backed by `@napi-rs/keyring`, falling
+  back to an AES-256-GCM encrypted file (`secrets.enc`, mode 0600) when
+  the OS keychain is unavailable. See ADR 0002.
 
 ## Shared types / contracts
 
@@ -84,10 +124,16 @@ run in `jsdom`; everything else runs in Node.
 
 ## Docs
 
-- `docs/adr/0001-stack.md` — this stack ADR.
+- `docs/adr/0001-stack.md` — the stack ADR.
+- `docs/adr/0002-keychain-and-encrypted-fallback.md` — keychain adapter
+  and AES-256-GCM encrypted-file fallback.
+- `docs/adr/0003-local-store-migrations.md` — forward-only,
+  transactional, backup-first local-store migration runner.
 - `docs/adr/` — one file per architectural decision. Never rewrite an
   accepted ADR; supersede it with a new one.
 - `docs/architecture/repo-layout.md` — this document.
+- `docs/architecture/domain-model.md` — entity shapes and status enums.
+- `docs/architecture/store-schema.md` — on-disk schema of `cairn.db`.
 - `docs/architecture/` — architecture notes (diagrams, data-flow, deployment).
 
 ## Scripts

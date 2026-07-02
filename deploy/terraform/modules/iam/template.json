@@ -1,0 +1,9 @@
+{
+  "name": "iam",
+  "title": "Least-privilege service account",
+  "category": "supporting",
+  "whenToUse": "Almost always — create a dedicated runtime service account per service rather than using the default compute SA. Grant only the roles the service needs (e.g. roles/secretmanager.secretAccessor, roles/storage.objectAdmin on a specific bucket).",
+  "variables": ["project_id", "account_id", "display_name", "roles"],
+  "naming": "account_id = ${app_name}-${env}",
+  "security": "roles/owner and roles/editor are rejected by a variable validation — keep least-privilege."
+}

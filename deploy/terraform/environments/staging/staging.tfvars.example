@@ -1,0 +1,8 @@
+# Example only — NOT used by CI and NOT auto-loaded by Terraform.
+# CI (deploy-staging.yml) supplies these via TF_VAR_* repo variables.
+# Copy to staging.tfvars for a local `terraform plan`/`apply` if you want:
+#   terraform plan -var-file=staging.tfvars
+# (staging.tfvars is gitignored; this .example file is committed as documentation.)
+project_id = "your-staging-project-id"
+region     = "europe-west1"
+env        = "staging"

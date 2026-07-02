@@ -1,0 +1,55 @@
+# Production deploy — gated. Runs only on a version tag (or manual dispatch),
+# and the `production` GitHub Environment should require a manual reviewer
+# approval. Same WIF auth as staging; never auto-applies from a PR.
+# Terraform inputs come from GitHub repo variables (TF_VAR_*) — nothing
+# environment-specific is committed.
+#
+# Cairn is a desktop app — this workflow does NOT build a container image.
+# It provisions the installer-releases bucket + uploader SA. The actual
+# installer build lives in package.yml and uploading installers to the bucket
+# is a follow-up step documented in deploy/README.md.
+name: Deploy Production
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+jobs:
+  deploy-production:
+    runs-on: ubuntu-latest
+    # Protect this environment in repo settings: require reviewers before run.
+    environment: production
+    env:
+      TF_VAR_project_id: ${{ vars.GCP_PROJECT_PRODUCTION }}
+      TF_VAR_region: ${{ vars.GCP_REGION }}
+      TF_VAR_env: production
+    defaults:
+      run:
+        working-directory: deploy/terraform/environments/production
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.5"
+
+      - run: terraform init -input=false
+      - run: terraform plan -input=false -out=tfplan
+      - run: terraform apply -input=false tfplan

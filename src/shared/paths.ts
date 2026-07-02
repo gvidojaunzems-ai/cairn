@@ -127,6 +127,10 @@ export function resolvePaths(): AppPaths {
 /**
  * Ensure every directory in `paths` exists. Idempotent — creates missing
  * directories, silently succeeds when they already exist.
+ *
+ * The `data` directory ships with several conventional subfolders (index/,
+ * cache/, models/, team-repo/, attachments/) which are created here so
+ * migrations and DAOs never have to guess whether they exist yet.
  */
 export function createDirectories(paths: AppPaths): void {
   // `recursive: true` also makes this a no-op when the directory exists, which
@@ -134,4 +138,36 @@ export function createDirectories(paths: AppPaths): void {
   mkdirSync(paths.data, { recursive: true });
   mkdirSync(paths.cache, { recursive: true });
   mkdirSync(paths.logs, { recursive: true });
+  // Data-directory subfolders. Kept flat under `paths.data` so the app can be
+  // moved wholesale by copying a single directory.
+  const p = pathModuleFor(process.platform);
+  mkdirSync(p.join(paths.data, 'index'), { recursive: true });
+  mkdirSync(p.join(paths.data, 'models'), { recursive: true });
+  mkdirSync(p.join(paths.data, 'team-repo'), { recursive: true });
+  mkdirSync(p.join(paths.data, 'attachments'), { recursive: true });
+  mkdirSync(p.join(paths.data, 'backups'), { recursive: true });
+}
+
+/**
+ * Absolute path to the on-disk `cairn.db` file.
+ */
+export function databaseFile(paths: AppPaths): string {
+  const p = pathModuleFor(process.platform);
+  return p.join(paths.data, 'cairn.db');
+}
+
+/**
+ * Absolute path to the team-repo config directory.
+ */
+export function teamRepoDir(paths: AppPaths): string {
+  const p = pathModuleFor(process.platform);
+  return p.join(paths.data, 'team-repo');
+}
+
+/**
+ * Absolute path to the pre-migration backup directory.
+ */
+export function backupDir(paths: AppPaths): string {
+  const p = pathModuleFor(process.platform);
+  return p.join(paths.data, 'backups');
 }

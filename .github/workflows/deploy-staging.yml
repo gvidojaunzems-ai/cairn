@@ -1,0 +1,61 @@
+# Staging deploy — runs on every PR. Authenticates to GCP via Workload Identity
+# Federation (no long-lived keys). Terraform inputs come from GitHub repo
+# variables (TF_VAR_*), so nothing environment-specific is committed.
+#
+# Set these once under Settings → Secrets and variables → Actions → Variables:
+#   GCP_WIF_PROVIDER, GCP_DEPLOY_SA, GCP_REGION, GCP_PROJECT_STAGING
+#   (see deploy/README.md and deploy/bootstrap)
+#
+# Cairn is a desktop app — this workflow does NOT build a container image.
+# It provisions the installer-releases bucket + uploader SA. The actual
+# installer build lives in package.yml and uploading installers to the bucket
+# is a follow-up step documented in deploy/README.md.
+name: Deploy Staging
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  id-token: write       # required for Workload Identity Federation
+  pull-requests: write
+
+concurrency:
+  group: staging-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    # Same-repo PRs only — fork PRs can't hold the WIF/repo-variable trust and
+    # must not trigger a staging apply.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    environment: staging
+    env:
+      # Terraform variables — single source of truth is the repo variables, not
+      # a committed tfvars file. Terraform auto-reads TF_VAR_<name>.
+      TF_VAR_project_id: ${{ vars.GCP_PROJECT_STAGING }}
+      TF_VAR_region: ${{ vars.GCP_REGION }}
+      TF_VAR_env: staging
+    defaults:
+      run:
+        working-directory: deploy/terraform/environments/staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.5"
+
+      - run: terraform init -input=false
+      - run: terraform plan -input=false -out=tfplan
+      - run: terraform apply -input=false tfplan

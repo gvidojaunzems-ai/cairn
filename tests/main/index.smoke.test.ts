@@ -1,7 +1,8 @@
-// qa-spec: S1 — Dev command opens a blank Cairn window titled 'Cairn'.
-// Covers AC-1. We cannot spawn Electron in unit tests, so we assert the code
-// path: main entry loads, exposes WINDOW_TITLE === 'Cairn', calls
-// registerErrorBoundary and createDirectories at startup.
+// qa-spec: S1, S12 — Dev command opens a blank Cairn window titled 'Cairn'.
+// Covers AC-1 and S12 no-ERROR-on-happy-path invariant. We cannot spawn
+// Electron in unit tests, so we assert the code path: main entry loads,
+// exposes WINDOW_TITLE === 'Cairn', calls registerErrorBoundary and
+// createDirectories at startup.
 import { describe, expect, it, vi } from 'vitest';
 
 // Mock the electron module so importing main/index doesn't fail
@@ -10,7 +11,10 @@ vi.mock('electron', () => ({
     on: vi.fn(),
     whenReady: vi.fn(() => Promise.resolve()),
     quit: vi.fn(),
+    relaunch: vi.fn(),
+    exit: vi.fn(),
     getAppPath: vi.fn(() => process.cwd()),
+    isPackaged: false,
   },
   BrowserWindow: vi.fn().mockImplementation(function (this: { opts: unknown }, opts: unknown) {
     this.opts = opts;
@@ -36,6 +40,9 @@ vi.mock('../../src/shared/paths', async () => {
     ...actual,
     resolvePaths: vi.fn(() => ({ data: '/mock/data', cache: '/mock/cache', logs: '/mock/logs' })),
     createDirectories: vi.fn(),
+    databaseFile: vi.fn(() => '/mock/data/cairn.db'),
+    teamRepoDir: vi.fn(() => '/mock/data/team-repo'),
+    backupDir: vi.fn(() => '/mock/data/backups'),
   };
 });
 
@@ -43,7 +50,17 @@ vi.mock('../../src/main/error-boundary', () => ({
   registerErrorBoundary: vi.fn(),
 }));
 
-describe('main/index — S1 startup wiring', () => {
+vi.mock('../../src/main/config/local-config', () => ({
+  loadLocalConfig: vi.fn(() => ({})),
+  localConfigPath: vi.fn(() => '/mock/data/local.config.json'),
+}));
+
+vi.mock('../../src/main/config/team-config', () => ({
+  loadTeamConfig: vi.fn(() => ({})),
+  teamConfigPath: vi.fn(() => '/mock/data/team-repo/config.json'),
+}));
+
+describe('main/index — S1/S12 startup wiring', () => {
   // qa-spec: S1
   it('module loads without throwing', async () => {
     await expect(import('../../src/main/index')).resolves.toBeDefined();
@@ -66,7 +83,7 @@ describe('main/index — S1 startup wiring', () => {
     registerSpy.mockClear();
     createDirsSpy.mockClear();
 
-    mod.bootstrap();
+    await mod.bootstrap();
 
     expect(registerSpy).toHaveBeenCalled();
     expect(createDirsSpy).toHaveBeenCalled();
@@ -83,17 +100,11 @@ describe('main/index — S1 startup wiring', () => {
     const BrowserWindowMock = electron.BrowserWindow as unknown as ReturnType<typeof vi.fn>;
     BrowserWindowMock.mockClear();
 
-    // Reload the module so bootstrap picks up the fresh mocks
-    vi.resetModules();
     const mod = await import('../../src/main/index');
-    mod.bootstrap();
+    await mod.bootstrap();
 
-    // Recheck the electron mock — the reset above may have wiped it, so re-import
-    const electron2 = await import('electron');
-    const BrowserWindowMock2 = electron2.BrowserWindow as unknown as ReturnType<typeof vi.fn>;
-
-    expect(BrowserWindowMock2).toHaveBeenCalled();
-    const firstCallArg = BrowserWindowMock2.mock.calls[0]?.[0] as Record<string, unknown> | undefined;
+    expect(BrowserWindowMock).toHaveBeenCalled();
+    const firstCallArg = BrowserWindowMock.mock.calls[0]?.[0] as Record<string, unknown> | undefined;
     expect(firstCallArg?.title).toBe('Cairn');
     // webPreferences must have contextIsolation:true and sandbox:true
     const wp = firstCallArg?.webPreferences as Record<string, unknown> | undefined;

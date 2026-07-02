@@ -1,9 +1,11 @@
 # Cairn
 
 Local-first, cross-platform desktop application scaffolded on Electron +
-TypeScript + Vite. This repository holds the foundation only — an empty
-window titled **Cairn**, quality gates, dormant CI, a packaging skeleton, and
-the placeholder contracts every later task extends.
+TypeScript + Vite. The foundation ships the empty window titled **Cairn**,
+quality gates, dormant CI, a packaging skeleton, and the embedded data
+layer: a `better-sqlite3` + `sqlite-vec` store with a forward-only
+migration runner, typed DAOs, an OS-keychain adapter with an
+AES-256-GCM encrypted-file fallback, and a fixture seed runner.
 
 ## Prerequisites
 
@@ -27,7 +29,7 @@ the placeholder contracts every later task extends.
 | pnpm lint | Lint `src/`, `tests/`, and `scripts/` with ESLint. |
 | pnpm format | Format the tree with Prettier. |
 | pnpm typecheck | Type-check main and renderer projects with `tsc --noEmit`. |
-| pnpm seed | Run the seed script stub via `tsx` (no-op in this release). |
+| pnpm seed | Populate a freshly-migrated `cairn.db` with fixture data (5 people, 6 PoC projects, charter, news/docs/tickets/WIP signals). |
 
 A `postinstall` hook runs `@electron/rebuild` so the `better-sqlite3` native
 binary matches the current Electron ABI on first install.
@@ -41,10 +43,17 @@ pnpm dev             # opens the Cairn window
 
 ## Where things live
 
-See [`docs/architecture/repo-layout.md`](docs/architecture/repo-layout.md) for
-the canonical directory layout, and [`docs/adr/0001-stack.md`](docs/adr/0001-stack.md)
-for the stack decision, rejected alternatives, and the intended keychain
-adapter.
+- [`docs/architecture/repo-layout.md`](docs/architecture/repo-layout.md) —
+  canonical directory layout.
+- [`docs/architecture/domain-model.md`](docs/architecture/domain-model.md) —
+  entity shapes and status enums.
+- [`docs/architecture/store-schema.md`](docs/architecture/store-schema.md) —
+  on-disk `cairn.db` schema and migration checklist.
+- [`docs/adr/0001-stack.md`](docs/adr/0001-stack.md) — stack decision.
+- [`docs/adr/0002-keychain-and-encrypted-fallback.md`](docs/adr/0002-keychain-and-encrypted-fallback.md) —
+  keychain adapter + AES-256-GCM fallback.
+- [`docs/adr/0003-local-store-migrations.md`](docs/adr/0003-local-store-migrations.md) —
+  forward-only migration runner.
 
 ## Contributing
 

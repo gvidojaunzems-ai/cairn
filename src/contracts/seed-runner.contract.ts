@@ -11,6 +11,8 @@
  *     two positive-path outcomes; `errors` captures partial failures without
  *     forcing a global throw; `durationMs` supports lightweight regression
  *     monitoring during local development.
+ *   - `perEntity` (below) is ADDITIVE — pre-existing `SeedResult` consumers
+ *     that only read `loaded/skipped/errors/durationMs` continue to compile.
  */
 
 /**
@@ -25,6 +27,12 @@ export interface SeedResult {
   errors: string[];
   /** Wall-clock duration of the run in milliseconds. */
   durationMs: number;
+  /**
+   * Optional per-entity breakdown. Keyed by entity table name (e.g. 'people',
+   * 'projects'). Values are the count of rows inserted for that entity.
+   * Absent when a runner does not compute a breakdown.
+   */
+  perEntity?: Readonly<Record<string, number>>;
 }
 
 /**

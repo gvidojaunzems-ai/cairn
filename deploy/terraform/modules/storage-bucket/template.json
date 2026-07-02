@@ -1,0 +1,9 @@
+{
+  "name": "storage-bucket",
+  "title": "Cloud Storage bucket",
+  "category": "supporting",
+  "whenToUse": "Only when the code actually reads/writes object storage (e.g. uploads, generated assets, function source zips). Detect from storage SDK imports / file-upload features. Do NOT add speculatively.",
+  "variables": ["project_id", "name", "location", "force_destroy", "versioning", "object_writer_service_accounts", "object_admin_service_accounts"],
+  "naming": "name = ${project_id}-${app_name}-${purpose} (project_id prefix guarantees GLOBAL uniqueness)",
+  "security": "uniform_bucket_level_access + public_access_prevention=enforced are mandatory defaults. Grant the runtime SA access via object_writer_service_accounts (write-only) or object_admin_service_accounts (resource-scoped) — do NOT grant project-wide storage roles via the iam module."
+}

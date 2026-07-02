@@ -1,7 +1,7 @@
-// qa-spec: (implicit — agent-plan Task 9 five stable contracts)
-// Asserts every contract file exports its declared symbol AND carries a
-// versioning-warning JSDoc block. These files must never mutate without a
-// new ADR.
+// qa-spec: S11 — Contracts test still passes with additive extensions.
+// Original: agent-plan Task 9 five stable contracts. Extended to cover the
+// new entity types introduced additively without breaking the DO NOT MODIFY
+// versioning invariant.
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -13,12 +13,44 @@ interface ContractDef {
   exports: string[];
 }
 
+// Original + additive entity types. Every entry MUST be present as an
+// `export interface|type <Name>` declaration.
 const CONTRACTS: ContractDef[] = [
   { file: 'team-repo.contract.ts', exports: ['TeamRepo'] },
-  { file: 'local-store.contract.ts', exports: ['LocalStoreSchema'] },
+  {
+    file: 'local-store.contract.ts',
+    exports: ['LocalStoreSchema', 'MigrationDescriptor', 'KnownEntityTable'],
+  },
   { file: 'core-service.contract.ts', exports: ['CoreServiceResult'] },
   { file: 'ai-task.contract.ts', exports: ['AITask'] },
-  { file: 'domain-model.contract.ts', exports: ['KnowledgeItem'] },
+  {
+    file: 'domain-model.contract.ts',
+    exports: [
+      'KnowledgeItem',
+      'Person',
+      'Project',
+      'ProjectStatus',
+      'Charter',
+      'NewsItem',
+      'NewsSource',
+      'Doc',
+      'Ticket',
+      'TicketStatus',
+      'WipSignal',
+      'WipSignalStatus',
+      'Vector',
+      'Tag',
+      'Link',
+      'Attachment',
+      'EmbeddingCache',
+      'Setting',
+      'AuditLogEntry',
+      'AppSession',
+      'EventRecord',
+      'VectorMetadata',
+    ],
+  },
+  { file: 'seed-runner.contract.ts', exports: ['SeedResult', 'SeedRunner'] },
 ];
 
 async function importContract(file: string): Promise<Record<string, unknown>> {
@@ -26,9 +58,9 @@ async function importContract(file: string): Promise<Record<string, unknown>> {
   return (await import(`../../src/contracts/${stem}`)) as Record<string, unknown>;
 }
 
-describe('contracts — exports and versioning warning (implicit T9)', () => {
+describe('contracts — exports and versioning warning (S11)', () => {
   for (const { file, exports } of CONTRACTS) {
-    // implicit
+    // S11
     it(`${file} exports [${exports.join(', ')}]`, async () => {
       const mod = await importContract(file);
       for (const name of exports) {
@@ -43,7 +75,7 @@ describe('contracts — exports and versioning warning (implicit T9)', () => {
       }
     });
 
-    // implicit — every contract file must carry a versioning warning JSDoc
+    // S11 — every contract file must carry a versioning warning JSDoc
     it(`${file} contains the JSDoc versioning warning`, () => {
       const src = readFileSync(resolve(CONTRACTS_DIR, file), 'utf-8');
       // Warning must mention "ADR" or "version" and be in a leading comment
