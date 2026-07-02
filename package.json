@@ -1,0 +1,51 @@
+{
+  "name": "cairn",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Cairn — local-first, cross-platform desktop application (foundation scaffold).",
+  "main": "out/main/index.js",
+  "type": "module",
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  },
+  "packageManager": "pnpm@9.12.0",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "package": "electron-builder",
+    "test": "vitest run",
+    "lint": "eslint src tests scripts --ext .ts,.tsx",
+    "format": "prettier --write .",
+    "typecheck": "tsc --noEmit -p tsconfig.main.json && tsc --noEmit -p tsconfig.renderer.json",
+    "seed": "tsx scripts/seed.ts",
+    "postinstall": "electron-rebuild"
+  },
+  "dependencies": {
+    "better-sqlite3": "11.3.0",
+    "sqlite-vec": "0.1.6"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "3.7.0",
+    "@types/better-sqlite3": "7.6.11",
+    "@types/node": "20.16.5",
+    "@types/react": "18.3.11",
+    "@types/react-dom": "18.3.0",
+    "@typescript-eslint/eslint-plugin": "7.18.0",
+    "@typescript-eslint/parser": "7.18.0",
+    "@vitejs/plugin-react": "4.3.2",
+    "electron": "32.1.2",
+    "electron-builder": "25.0.5",
+    "electron-vite": "2.3.0",
+    "eslint": "8.57.1",
+    "jsdom": "25.0.1",
+    "prettier": "3.3.3",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "tsx": "4.19.1",
+    "typescript": "5.5.4",
+    "vite": "5.4.8",
+    "vitest": "2.1.1",
+    "yaml": "2.5.1"
+  }
+}

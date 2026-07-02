@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "out/tsc/main",
+    "rootDir": ".",
+    "types": ["node", "vitest/globals"],
+    "noEmit": true
+  },
+  "include": [
+    "src/main/**/*.ts",
+    "src/preload/**/*.ts",
+    "src/shared/**/*.ts",
+    "src/contracts/**/*.ts",
+    "scripts/**/*.ts",
+    "tests/main/**/*.ts",
+    "tests/shared/**/*.ts",
+    "tests/contracts/**/*.ts",
+    "tests/scripts/**/*.ts",
+    "tests/meta/**/*.ts",
+    "tests/docs/**/*.ts",
+    "tests/ci/**/*.ts",
+    "tests/packaging/**/*.ts"
+  ]
+}

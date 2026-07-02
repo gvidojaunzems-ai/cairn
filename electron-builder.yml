@@ -1,0 +1,54 @@
+# electron-builder configuration.
+#
+# Business rules:
+#   - The `files:` glob MUST match the electron-vite output layout
+#     (`out/**/*`). A mismatch produces a silently-empty installer.
+#   - `directories.output: dist/installers` keeps packaged installers out of
+#     the source tree and matches the smoke-test acceptance criterion.
+#   - Code signing, notarisation, and auto-update are deferred — the hooks are
+#     present but empty. See TODOs below.
+#   - `publish: null` prevents accidental publishes if a CI job forgets to
+#     override it.
+
+appId: com.cairn.app
+productName: Cairn
+copyright: Copyright © 2026 Cairn contributors
+
+directories:
+  output: dist/installers
+  buildResources: build
+
+files:
+  - out/**/*
+  - package.json
+  - '!node_modules/**/*'
+
+# Only bundle production runtime deps into asar; devDependencies stay out.
+asarUnpack:
+  - '**/*.node'
+
+win:
+  # NSIS is electron-builder's default Windows installer — chosen deliberately
+  # to keep the toolchain requirements low (no WiX/MSI stack needed).
+  target: nsis
+  # TODO (hardening task): populate CSC_LINK / CSC_KEY_PASSWORD env for
+  # authenticode signing.
+  signingHashAlgorithms:
+    - sha256
+
+mac:
+  target: dmg
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  # TODO (hardening task): wire real notarisation via APPLE_ID +
+  # APPLE_APP_SPECIFIC_PASSWORD. The stub in scripts/notarize.js is a no-op.
+  afterSign: scripts/notarize.js
+
+linux:
+  target: AppImage
+  category: Utility
+
+# TODO (hardening task): configure the auto-update publish channel (S3, GitHub
+# Releases, etc.) once the repo is on GitHub and code-signing is in place.
+publish: null

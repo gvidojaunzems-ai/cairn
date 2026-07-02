@@ -1,0 +1,5 @@
+# Single-package layout for now. Kept as a workspace declaration so future
+# packages (e.g. a shared `contracts` package, or a companion CLI) can be added
+# under `packages/*` without a root reshape.
+packages:
+  - '.'

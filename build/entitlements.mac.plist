@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  macOS entitlements — placeholder.
+
+  Business rules:
+    - Hardened runtime is enabled in electron-builder.yml. That requires the
+      minimum set of entitlements to allow JIT and dynamic library loading
+      (Electron uses V8 JIT, better-sqlite3 loads a native `.node` binary).
+    - Camera, microphone, and network client are NOT enabled here — future
+      tasks that need them must explicitly widen the manifest and record
+      the rationale in an ADR.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+</dict>
+</plist>

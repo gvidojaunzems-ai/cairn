@@ -1,0 +1,8 @@
+node_modules/
+out/
+dist/
+build/icon.png
+build/entitlements.mac.plist
+pnpm-lock.yaml
+*.md
+.aide-spec/

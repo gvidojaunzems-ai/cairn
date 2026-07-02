@@ -1,0 +1,31 @@
+# AIDE agent artifacts — not part of the Cairn product.
+.aide-spec/
+
+node_modules/
+out/
+dist/
+coverage/
+.vite/
+
+# Env / secrets — must never be committed.
+.env
+.env.*
+!.env.example
+
+# OS junk.
+.DS_Store
+Thumbs.db
+
+# Editor state.
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Log files (per-OS log dirs are outside the repo; local ad-hoc logs shouldn't
+# leak into commits).
+*.log
+logs/
+
+# TypeScript incremental build info.
+*.tsbuildinfo
