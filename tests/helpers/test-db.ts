@@ -1,8 +1,8 @@
 /**
  * Test helper — open an isolated `cairn.db` under a temp directory.
- * Skips sqlite-vec so job-focused suites do not require the extension.
+ * Runs the full migration chain (including vec0) so behaviour matches production.
  */
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -17,7 +17,21 @@ export function openTestStore(prefix = 'cairn-test-'): {
   const store = openStore({
     dataDir: dir,
     fileName: DB_FILE_NAME,
-    skipSqliteVec: true,
   });
   return { store, dir };
+}
+
+/** Safe teardown when beforeEach may have failed before `store` was assigned. */
+export function closeTestStore(
+  store: LocalStoreHandle | undefined,
+  dir: string | undefined,
+): void {
+  try {
+    store?.close();
+  } catch {
+    // ignore — DB may not have opened
+  }
+  if (dir !== undefined) {
+    rmSync(dir, { recursive: true, force: true });
+  }
 }

@@ -1,11 +1,10 @@
 // qa-spec: S11-adjacent — the on-disk local store opens under WAL mode,
 // runs migrations, and can round-trip a job row via the canonical db layer.
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { rmSync } from 'node:fs';
 
 import { DB_FILE_NAME } from '../../../src/main/db/schema';
 import { runMigrations } from '../../../src/main/db/migrations/runner';
-import { openTestStore } from '../../helpers/test-db';
+import { closeTestStore, openTestStore } from '../../helpers/test-db';
 import type { LocalStoreHandle } from '../../../src/main/db/store';
 
 let dir: string;
@@ -16,8 +15,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  store.close();
-  rmSync(dir, { recursive: true, force: true });
+  closeTestStore(store, dir);
 });
 
 describe('main/db/store — openStore (S11-adjacent)', () => {

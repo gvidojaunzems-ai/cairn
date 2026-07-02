@@ -1,9 +1,8 @@
 // qa-spec: S11-adjacent — JobsDao lifecycle: insert → updateStatus →
 // updateProgress → getById → listPending → cancelById.
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { rmSync } from 'node:fs';
 
-import { openTestStore } from '../helpers/test-db';
+import { openTestStore, closeTestStore } from '../helpers/test-db';
 import type { LocalStoreHandle } from '../../src/main/db/store';
 
 let dir: string;
@@ -14,8 +13,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  store.close();
-  rmSync(dir, { recursive: true, force: true });
+  closeTestStore(store, dir);
 });
 
 describe('JobsDao — insert / getById (S11-adjacent)', () => {

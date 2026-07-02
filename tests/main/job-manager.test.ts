@@ -8,7 +8,6 @@
 // and hermetic we inject an in-process fake `WorkerAdapter` that forwards
 // messages to the real background-worker's `handleMessage` export.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { rmSync } from 'node:fs';
 
 vi.mock('electron', () => ({
   ipcMain: { handle: vi.fn(), removeHandler: vi.fn() },
@@ -17,7 +16,7 @@ vi.mock('electron', () => ({
   BrowserWindow: vi.fn(),
 }));
 
-import { openTestStore } from '../helpers/test-db';
+import { closeTestStore, openTestStore } from '../helpers/test-db';
 import type { LocalStoreHandle } from '../../src/main/db/store';
 import { createEventBus } from '../../src/main/ipc/event-bus';
 import {
@@ -86,8 +85,8 @@ afterEach(async () => {
   if (manager !== null) {
     await manager.terminate();
   }
-  store.close();
-  rmSync(dir, { recursive: true, force: true });
+  closeTestStore(store, dir);
+  manager = null;
 });
 
 describe('JobManager — construction (S2/S3-adjacent)', () => {
