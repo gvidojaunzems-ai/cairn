@@ -1,5 +1,5 @@
 // qa-spec: (implicit — agent-plan Task 8 seed script stub)
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 describe('scripts/seed — stub SeedRunner', () => {
   // implicit

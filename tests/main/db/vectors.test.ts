@@ -20,7 +20,9 @@ describe('main/db/vectors — fixture invariants (S4)', () => {
 
   it('top-k(k=3) simulation returns the three neighbors that share a nonzero dim', async () => {
     const mod = await import('../../../src/main/db/fixtures/vectors');
-    const query = mod.VECTOR_FIXTURES[0]!;
+    const query = mod.VECTOR_FIXTURES[0];
+    expect(query).toBeDefined();
+    if (!query) return;
     // Cosine similarity — unit vectors, so it's just the dot product.
     const scored = mod.VECTOR_FIXTURES.map((v) => ({
       id: v.id,
@@ -32,7 +34,7 @@ describe('main/db/vectors — fixture invariants (S4)', () => {
       .sort((a, b) => b.score - a.score)
       .slice(0, 3);
     expect(scored).toHaveLength(3);
-    expect(scored[0]!.id).toBe(query.id);
+    expect(scored[0]?.id).toBe(query.id);
     // All top-3 must be from the project entity type — S4 metadata filter
     // pre-check.
     for (const hit of scored) {

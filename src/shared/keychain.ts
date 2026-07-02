@@ -287,7 +287,8 @@ function fallbackDelete(name: string): Result<void> {
     return okResult(undefined);
   }
   try {
-    delete file.secrets[name];
+    const { [name]: _removed, ...remainingSecrets } = file.secrets;
+    file.secrets = remainingSecrets;
     if (Object.keys(file.secrets).length === 0 && file.wrappedKey === undefined) {
       // Nothing left to persist AND no wrap key to keep — remove the file
       // entirely so the sentinel-scan test never sees stale ciphertext.
