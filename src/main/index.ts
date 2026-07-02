@@ -14,8 +14,11 @@
  *          forward. If the on-disk schema is newer than the code, ABORT
  *          before window construction; do not write.
  *       4. loadLocalConfig() + loadTeamConfig() — per-machine + team surfaces.
- *       5. registerIpcChannels() + createMainWindow() — only after the
- *          environment is ready.
+ *       5. registerIpcChannels() — including the namespaced router from
+ *          `src/main/ipc/register-handlers.ts`.
+ *       6. createMainWindow() — only after the environment is ready.
+ *       7. Lazy job manager / worker init — deferred to the first
+ *          non-`system.*` op so `system.getStatus` stays under 100 ms.
  *   - Security posture: BrowserWindow ALWAYS uses contextIsolation:true and
  *     sandbox:true. The preload script is the only bridge; the renderer
  *     never sees a raw ipcRenderer.
@@ -31,6 +34,8 @@ import { loadLocalConfig } from './config/local-config.js';
 import { loadTeamConfig } from './config/team-config.js';
 import { createDirectories, databaseFile, resolvePaths } from '../shared/paths.js';
 import { createLogger } from '../shared/logger.js';
+import { registerIpcHandlers } from './ipc/register-handlers.js';
+import { createEventBus, type EventBus } from './ipc/event-bus.js';
 
 export const WINDOW_TITLE = 'Cairn';
 export const RESTART_APP_CHANNEL = 'restart-app';
@@ -71,7 +76,11 @@ function createMainWindow(): BrowserWindow {
   return window;
 }
 
-function registerIpcChannels(): void {
+/**
+ * Legacy restart channel — kept as `ipcMain.on` because it is fire-and-
+ * forget from the renderer.
+ */
+function registerRestartChannel(): void {
   // Renderer -> main: request a full app restart (used by the React error
   // boundary "Restart" button).
   ipcMain.on(RESTART_APP_CHANNEL, () => {
@@ -177,6 +186,27 @@ function showNewerSchemaError(reason: string): void {
   } catch {
     // In non-Electron test envs `dialog` is a stub; ignore.
   }
+}
+
+let cachedEventBus: EventBus | undefined;
+
+/**
+ * Lazily construct the event bus. Kept lazy so tests that only need to
+ * exercise the router don't spin up the Electron `webContents` module.
+ */
+export function getEventBus(): EventBus {
+  if (!cachedEventBus) {
+    cachedEventBus = createEventBus();
+  }
+  return cachedEventBus;
+}
+
+function registerIpcChannels(): void {
+  registerRestartChannel();
+  // The namespaced router owns every declared `namespace.op` handler.
+  // Passing no `jobManager` means `jobs.*` responds with `not_implemented`
+  // until the worker is lazily initialised on the first job.start call.
+  registerIpcHandlers();
 }
 
 /**

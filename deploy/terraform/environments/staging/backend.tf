@@ -1,9 +1,9 @@
 # Remote state in GCS. Create the state bucket once (see deploy/bootstrap) and
-# fill the bucket name below. Use a distinct prefix per environment so staging
-# and production never share state.
+# fill the bucket name below. Staging and production use distinct prefixes so
+# they never share state.
 terraform {
   backend "gcs" {
-    bucket = "TODO-terraform-state-bucket"
+    bucket = "TODO-cairn-terraform-state"
     prefix = "cairn/staging"
   }
 }

@@ -82,6 +82,12 @@ vi.mock('../../../src/main/config/team-config', () => ({
   teamConfigPath: vi.fn(() => '/mock/data/team-repo/config.json'),
 }));
 
+vi.mock('../../../src/main/ipc/register-handlers.js', () => ({
+  registerIpcHandlers: vi.fn(() => {
+    invocationOrder.push('registerIpcHandlers');
+  }),
+}));
+
 beforeEach(() => {
   invocationOrder.length = 0;
   dbSpies.openDatabase.mockClear();

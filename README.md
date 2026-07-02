@@ -49,11 +49,32 @@ pnpm dev             # opens the Cairn window
   entity shapes and status enums.
 - [`docs/architecture/store-schema.md`](docs/architecture/store-schema.md) —
   on-disk `cairn.db` schema and migration checklist.
+- [`docs/architecture/service-api.md`](docs/architecture/service-api.md) —
+  typed IPC service surface (16 op namespaces, 10 server → UI events).
 - [`docs/adr/0001-stack.md`](docs/adr/0001-stack.md) — stack decision.
 - [`docs/adr/0002-keychain-and-encrypted-fallback.md`](docs/adr/0002-keychain-and-encrypted-fallback.md) —
   keychain adapter + AES-256-GCM fallback.
 - [`docs/adr/0003-local-store-migrations.md`](docs/adr/0003-local-store-migrations.md) —
   forward-only migration runner.
+- [`docs/adr/0005-ipc-transport-and-worker.md`](docs/adr/0005-ipc-transport-and-worker.md) —
+  IPC transport and background worker model.
+- [`docs/adr/0006-core-service-result-typed-errors.md`](docs/adr/0006-core-service-result-typed-errors.md) —
+  typed `CoreServiceError` taxonomy.
+- [`docs/adr/0004-local-store-jobs-table.md`](docs/adr/0004-local-store-jobs-table.md) —
+  local store `jobs` table (schema v2).
+
+## IPC service API
+
+The renderer talks to core exclusively over the typed
+`window.cairn` bridge exposed by `src/preload/index.ts`. The full
+surface — 16 op namespaces, 10 server → UI events, the `apiVersion`
+handshake, and the `CoreServiceResult<T>` shape — is enumerated in
+[`docs/architecture/service-api.md`](docs/architecture/service-api.md).
+
+Business logic on most namespaces is still stubbed and returns
+`{ ok:false, error:{ code:'not_implemented' } }` uniformly. Only
+`system.getStatus`, `system.getApiVersion`, `jobs.start`, and
+`jobs.cancel` have real implementations at foundation time.
 
 ## Contributing
 

@@ -65,6 +65,10 @@ vi.mock('../../src/main/db/index.js', () => ({
   runMigrations: vi.fn(),
 }));
 
+vi.mock('../../src/main/ipc/register-handlers.js', () => ({
+  registerIpcHandlers: vi.fn(),
+}));
+
 describe('main/index — S1/S12 startup wiring', () => {
   // qa-spec: S1
   it('module loads without throwing', async () => {

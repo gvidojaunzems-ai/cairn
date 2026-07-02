@@ -17,6 +17,8 @@ Everything the user sees runs in the Chromium renderer.
 - `src/renderer/hooks/use-color-scheme.ts` — reflects `prefers-color-scheme`.
 - `src/renderer/hooks/use-reduced-motion.ts` — reflects
   `prefers-reduced-motion`.
+- `src/renderer/hooks/use-core-service.ts` — typed IPC client hook.
+- `src/renderer/ipc/` — renderer-side IPC client (`client.ts`, types).
 - `src/renderer/styles/global.css` — visible focus-ring, WCAG-AA colour
   tokens, reduced-motion overrides.
 
@@ -37,8 +39,21 @@ integration.
 - `src/main/config/team-config.ts` — team-repo config loader under
   `resolvePaths().data/team-repo`.
 - `src/main/config/index.ts` — barrel export.
+- `src/main/ipc/` — the IPC transport layer. `router.ts` dispatches
+  `namespace.op` calls, `validate.ts` runs Zod schemas at the boundary,
+  `event-bus.ts` fans server → UI events out via `webContents.send`,
+  `errors.ts` centralises `CoreServiceError` construction.
+- `src/main/services/` — per-namespace service stubs (16 files). Each
+  exports a stable object; every stub returns `not_implemented` uniformly.
+- `src/main/workers/` — the `node:worker_threads` background worker
+  script (`background.worker.ts`).
+- `src/main/jobs/` — main-thread `JobManager`, sample-long-job fixture,
+  job-registry, and worker message shapes.
+- `src/main/data/` — better-sqlite3 handle + jobs DAO layer used by the
+  job manager (migrations `001-initial`, `002-jobs-table`).
 - `src/preload/index.ts` — the ONLY IPC bridge. Exposes a typed
-  `window.cairn` surface via `contextBridge.exposeInMainWorld`.
+  `window.cairn` surface (`invoke`, `on`, `off`, `restartApp`) via
+  `contextBridge.exposeInMainWorld`.
 
 ## Embedded data layer
 
@@ -86,6 +101,11 @@ Cross-process utilities and the on-disk footprint.
   `setSecret` / `deleteSecret` backed by `@napi-rs/keyring`, falling
   back to an AES-256-GCM encrypted file (`secrets.enc`, mode 0600) when
   the OS keychain is unavailable. See ADR 0002.
+- `src/shared/ipc/` — the IPC descriptor layer consumed by preload and
+  main: `operations.ts` (16 op namespaces + typed request/response
+  descriptors), `events.ts` (10 event names + payload types),
+  `api-version.ts` (transport version constant), `schemas.ts` (Zod input
+  schemas — main-only; NOT re-exported from the barrel).
 
 ## Shared types / contracts
 
@@ -129,11 +149,17 @@ run in `jsdom`; everything else runs in Node.
   and AES-256-GCM encrypted-file fallback.
 - `docs/adr/0003-local-store-migrations.md` — forward-only,
   transactional, backup-first local-store migration runner.
+- `docs/adr/0005-ipc-transport-and-worker.md` — IPC transport and
+  background worker model.
+- `docs/adr/0006-core-service-result-typed-errors.md` — typed
+  `CoreServiceError` taxonomy.
+- `docs/adr/0004-local-store-jobs-table.md` — local store `jobs` table.
 - `docs/adr/` — one file per architectural decision. Never rewrite an
   accepted ADR; supersede it with a new one.
 - `docs/architecture/repo-layout.md` — this document.
 - `docs/architecture/domain-model.md` — entity shapes and status enums.
 - `docs/architecture/store-schema.md` — on-disk schema of `cairn.db`.
+- `docs/architecture/service-api.md` — typed IPC service surface.
 - `docs/architecture/` — architecture notes (diagrams, data-flow, deployment).
 
 ## Scripts
